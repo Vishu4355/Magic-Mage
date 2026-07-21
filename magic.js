@@ -13,14 +13,32 @@ window.addEventListener('load', function(){
 
         constructor(game){
             this.game = game;
-            this.Collisionx;
-            this.Collisionxy;
+            this.Collisionx = this.game.width * 0.5;
+            this.Collisiony = this.game.height * 0.5;
+            this.CollisionRadius = 50;
+            this.speedx = 0;
+            this.speedy = 0;
 
         }
         draw(context){
             context.beginPath();
-            context.arc(100,100,50,0, Math.PI*2);
+            context.arc(this.Collisionx,this.Collisiony,this.CollisionRadius,0, Math.PI*2);
             context.fill();
+            context.beginPath();
+            context.moveTo(this.Collisionx, this.Collisiony);
+            context.lineTo(this.game.mouse.x, this.game.mouse.y);
+            context.stroke();
+        }
+
+
+        update(){
+
+
+            this.speedx = (this.game.mouse.x - this.Collisionx)/20;
+            this.speedy = (this.game.mouse.y - this.Collisiony)/20;
+            this.Collisionx += this.speedx;
+            this.Collisiony += this.speedy;
+
         }
 
     
@@ -183,9 +201,17 @@ window.addEventListener('load', function(){
 
             
             canvas.addEventListener('mousemove', (e) =>{
-                this.mouse.x = e.offsetX;
-                this.mouse.y = e.offsetY;
-                this.mouse.pressed = true;
+
+
+                if (this.mouse.pressed){
+
+
+                     this.mouse.x = e.offsetX;
+                     this.mouse.y = e.offsetY;
+
+                }
+               
+                
 
             });
 
@@ -193,12 +219,32 @@ window.addEventListener('load', function(){
 
         render(context) {
             this.background.draw(context);
+            this.Player.update();
             this.Player.draw(context);
+            
         }
     }
 
     const game = new Game(canvas);
-    game.render(ctx);
+
+
+
+
+
+    function animate(){
+
+        ctx.clearRect(0,0, canvas.width, canvas.height);
+
+        game.render(ctx);
+        requestAnimationFrame(animate);
+
+
+    }
+
+
+    animate()
+
+
    
 
 
@@ -209,7 +255,7 @@ window.addEventListener('load', function(){
 });
 
 
-console.log("JS file loaded");
+
 
 
 
