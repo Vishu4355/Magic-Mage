@@ -197,6 +197,32 @@ window.addEventListener('load', function(){
     }
 
 
+    class Obstacles{
+        constructor(game){
+
+            this.game  = game;
+            this.CollisionRadius = 60;
+            this.Collisionx = Math.random() * (this.game.width - this.CollisionRadius *2) + this.CollisionRadius;
+            this.Collisiony = Math.random() * (this.game.height - this.CollisionRadius *2) + this.CollisionRadius;
+         
+
+        }
+
+        draw(context){
+
+            context.beginPath();
+            context.arc(this.Collisionx,this.Collisiony,this.CollisionRadius,0, Math.PI*2);
+            context.fill();
+
+        }
+    }
+
+
+
+
+
+
+
 
     class Game {
         constructor(canvas){
@@ -205,6 +231,8 @@ window.addEventListener('load', function(){
             this.height = this.canvas.height;
             this.background = new Background(this);
             this.Player = new Player(this);
+            this.noofobstacles = 5;
+            this.Obstacles = []
             this.keys = {
                 ArrowUp : false,
                 ArrowDown : false,
@@ -250,48 +278,33 @@ window.addEventListener('load', function(){
 
 
 
-            canvas.addEventListener('mousedown', (e) =>{
-                this.mouse.x = e.offsetX;
-                this.mouse.y = e.offsetY;
-                this.mouse.pressed = true;
-
-            });
-
             
-            canvas.addEventListener('mouseup', (e) =>{
-                this.mouse.x = e.offsetX;
-                this.mouse.y = e.offsetY;
-                this.mouse.pressed = false;
-
-            });
-
-            
-            canvas.addEventListener('mousemove', (e) =>{
-
-
-                if (this.mouse.pressed){
-
-
-                     this.mouse.x = e.offsetX;
-                     this.mouse.y = e.offsetY;
-
-                }
-               
-                
-
-            });
 
         }
+
 
         render(context) {
             this.background.draw(context);
             this.Player.update();
             this.Player.draw(context);
+            this.Obstacles.forEach(obstacle => obstacle.draw(context));
             
         }
+
+
+        Init(){
+            for(let i = 0; i < this.noofobstacles; i++){
+                this.Obstacles.push(new Obstacles(this));
+            }
+        }
+
+
+
     }
 
     const game = new Game(canvas);
+    game.Init();
+    console.log(game);
 
 
 
