@@ -24,24 +24,52 @@ window.addEventListener('load', function(){
             context.beginPath();
             context.arc(this.Collisionx,this.Collisiony,this.CollisionRadius,0, Math.PI*2);
             context.fill();
-            context.beginPath();
-            context.moveTo(this.Collisionx, this.Collisiony);
-            context.lineTo(this.game.mouse.x, this.game.mouse.y);
-            context.stroke();
+           
         }
 
 
         update(){
 
 
-            this.speedx = (this.game.mouse.x - this.Collisionx)/20;
-            this.speedy = (this.game.mouse.y - this.Collisiony)/20;
+
+
+            this.speedx = 0;
+            this.speedy = 0;
+
+            const speed = 5;
+
+            if (this.game.keys.ArrowRight || this.game.keys.d) {
+                this.speedx = speed;
+            }
+
+            if (this.game.keys.ArrowLeft || this.game.keys.a) {
+                this.speedx = -speed;
+            }
+
+            if (this.game.keys.ArrowUp || this.game.keys.w) {
+                this.speedy = -speed;
+            }
+
+            if (this.game.keys.ArrowDown || this.game.keys.s) {
+                this.speedy = speed;
+            }
+
             this.Collisionx += this.speedx;
             this.Collisiony += this.speedy;
 
+
+            this.Collisionx = Math.max(
+            this.CollisionRadius,
+            Math.min(this.Collisionx, this.game.width - this.CollisionRadius)
+            );
+
+            this.Collisiony = Math.max(
+            this.CollisionRadius,
+             Math.min(this.Collisiony, this.game.height - this.CollisionRadius)
+            );
+
         }
 
-    
         
 
     }
@@ -177,11 +205,49 @@ window.addEventListener('load', function(){
             this.height = this.canvas.height;
             this.background = new Background(this);
             this.Player = new Player(this);
+            this.keys = {
+                ArrowUp : false,
+                ArrowDown : false,
+                ArrowLeft : false,
+                ArrowRight : false,
+                w : false,
+                a : false,
+                s : false,
+                d : false
+
+
+            };
+
             this.mouse = {
                 x: this.width * 0.5,
                 y: this.height * 0.5,
                 pressed: false
             }
+
+
+            window.addEventListener("keydown", (e) => {
+            if (this.keys.hasOwnProperty(e.key)) {
+            this.keys[e.key] = true;
+             }
+            });
+
+
+
+            window.addEventListener("keyup", (e) => {
+             if (this.keys.hasOwnProperty(e.key)) {
+            this.keys[e.key] = false;
+            }
+            });
+
+            window.addEventListener("keydown", (e) => {
+                console.log(e.key);
+
+                if (this.keys.hasOwnProperty(e.key)) {
+                this.keys[e.key] = true;
+                }
+            });
+
+
 
 
             canvas.addEventListener('mousedown', (e) =>{
