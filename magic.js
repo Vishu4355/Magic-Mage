@@ -218,6 +218,23 @@ window.addEventListener('load', function(){
     }
 
 
+    class Platform{
+        constructor(game,x,y,width,height){
+            this.game = game;
+            this.x = x;
+            this.y = y;
+            this.width = width;
+            this.height = height;
+
+        }
+
+        draw(context){
+            context.fillStyle = "red";
+            context.fillRect(this.x,this.y,this.width,this.height);
+        }
+    }
+
+
 
 
 
@@ -233,6 +250,14 @@ window.addEventListener('load', function(){
             this.Player = new Player(this);
             this.noofobstacles = 5;
             this.Obstacles = []
+            this.Platforms = []
+
+            this.Platforms.push(new Platform(this, 0, 350, 1200, 80));
+            this.Platforms.push(new Platform(this, 250, 500, 200, 20));
+            this.Platforms.push(new Platform(this, 400, 200, 150, 20));
+
+
+
             this.keys = {
                 ArrowUp : false,
                 ArrowDown : false,
@@ -287,7 +312,8 @@ window.addEventListener('load', function(){
             this.background.draw(context);
             this.Player.update();
             this.Player.draw(context);
-            this.Obstacles.forEach(obstacle => obstacle.draw(context));
+          //  this.Obstacles.forEach(obstacle => obstacle.draw(context));
+            this.Platforms.forEach(platform => platform.draw((context)) );
             
         }
 
