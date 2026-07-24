@@ -293,9 +293,32 @@ window.addEventListener('load', function(){
 
 
         Init(){
-            for(let i = 0; i < this.noofobstacles; i++){
-                this.Obstacles.push(new Obstacles(this));
+
+            let attempts = 0;
+            while (this.Obstacles.length < this.noofobstacles
+                && attempts < 500){
+                    let testobstacles = new Obstacles(this);
+                    let overlap = false;
+                    this.Obstacles.forEach(obstacle => {
+                        const dx = testobstacles.Collisionx - obstacle.Collisionx;
+                        const dy = testobstacles.Collisiony - obstacle.Collisiony;
+                        const distance = Math.hypot(dx,dy);
+                        const sumofradii = testobstacles.CollisionRadius + obstacle.CollisionRadius;
+                        if (distance < sumofradii){
+                            overlap = true;
+                        }
+
+                    })
+
+                    if (!overlap){
+                        this.Obstacles.push(testobstacles);
+                    }
+
+
+                    attempts++;
+                
             }
+            
         }
 
 
