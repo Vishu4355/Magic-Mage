@@ -18,8 +18,16 @@ window.addEventListener('load', function(){
             this.CollisionRadius = 50;
             this.speedx = 0;
             this.speedy = 0;
+            this.velocityX = 0;
+            this.velocityY = 0;
+            this.gravity = 0.7;
+            this.jumpForce = -15;
+            this.onGround = false;
+
 
         }
+
+
         draw(context){
             context.beginPath();
             context.arc(this.Collisionx,this.Collisiony,this.CollisionRadius,0, Math.PI*2);
@@ -38,6 +46,7 @@ window.addEventListener('load', function(){
 
             const speed = 5;
 
+
             if (this.game.keys.ArrowRight || this.game.keys.d) {
                 this.speedx = speed;
             }
@@ -46,16 +55,55 @@ window.addEventListener('load', function(){
                 this.speedx = -speed;
             }
 
-            if (this.game.keys.ArrowUp || this.game.keys.w) {
-                this.speedy = -speed;
+            this.velocityX = this.speedx;
+
+            if ((this.game.keys[" "] || this.game.keys.Space) && this.onGround) {
+                this.velocityY = this.jumpForce;
+                this.onGround = false;
+
+              //  this.game.keys[" "] = false;
+
             }
 
-            if (this.game.keys.ArrowDown || this.game.keys.s) {
-                this.speedy = speed;
+
+            this.velocityY += this.gravity;
+
+            this.Collisionx += this.velocityX;
+            this.Collisiony += this.velocityY;
+
+
+            this.onGround = false;
+
+
+            // collision logic
+
+            this.game.Platforms.forEach(platform => {
+
+            const playerBottom = this.Collisiony + this.CollisionRadius;
+            const previousBottom = playerBottom - this.velocityY;
+
+            const playerLeft = this.Collisionx - this.CollisionRadius;
+            const playerRight = this.Collisionx + this.CollisionRadius;
+
+            const platformTop = platform.y;
+            const platformLeft = platform.x;
+            const platformRight = platform.x + platform.width;
+
+            if (
+                previousBottom <= platformTop &&
+                playerBottom >= platformTop &&
+                playerRight > platformLeft &&
+                playerLeft < platformRight &&
+                this.velocityY > 0
+            ) {
+                this.Collisiony = platformTop - this.CollisionRadius;
+                this.velocityY = 0;
+                this.onGround = true;
             }
 
-            this.Collisionx += this.speedx;
-            this.Collisiony += this.speedy;
+            });
+
+
 
 
             this.Collisionx = Math.max(
@@ -63,10 +111,9 @@ window.addEventListener('load', function(){
             Math.min(this.Collisionx, this.game.width - this.CollisionRadius)
             );
 
-            this.Collisiony = Math.max(
-            this.CollisionRadius,
-             Math.min(this.Collisiony, this.game.height - this.CollisionRadius)
-            );
+            if (this.Collisiony < this.CollisionRadius) {
+                    this.Collisiony = this.CollisionRadius;
+                }
 
         }
 
@@ -252,9 +299,7 @@ window.addEventListener('load', function(){
             this.Obstacles = []
             this.Platforms = []
 
-            this.Platforms.push(new Platform(this, 0, 350, 1200, 80));
-            this.Platforms.push(new Platform(this, 250, 500, 200, 20));
-            this.Platforms.push(new Platform(this, 400, 200, 150, 20));
+            this.Platforms.push(new Platform(this, 0,  500, 1200, 230));
 
 
 
@@ -263,6 +308,7 @@ window.addEventListener('load', function(){
                 ArrowDown : false,
                 ArrowLeft : false,
                 ArrowRight : false,
+                [" "] : false,
                 w : false,
                 a : false,
                 s : false,
