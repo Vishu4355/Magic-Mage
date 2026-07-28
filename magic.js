@@ -273,13 +273,18 @@ window.addEventListener('load', function(){
             this.width = width;
             this.height = height;
 
+            this.Image =  Image;
+           
+
         }
 
         draw(context){
-            context.fillStyle = "red";
-            context.fillRect(this.x,this.y,this.width,this.height);
+
+            // logic for platform to draw
+
+
         }
-    }
+    }      
 
 
 
@@ -299,7 +304,7 @@ window.addEventListener('load', function(){
             this.Obstacles = []
             this.Platforms = []
 
-            this.Platforms.push(new Platform(this, 0,  500, 1200, 230));
+            this.Platforms.push(new Platform(this, 0,  600, 1200, 200));
 
 
 
