@@ -32,6 +32,7 @@ window.addEventListener('load', function(){
 
 
         draw(context){
+            context.fillStyle = 'black';
            context.fillRect(this.x,this.y,this.width,this.height);
            
         }
@@ -74,6 +75,8 @@ window.addEventListener('load', function(){
 
             this.velocityY += this.gravity;
 
+
+
             this.x += this.velocityX;
             this.y += this.velocityY;
 
@@ -91,10 +94,15 @@ window.addEventListener('load', function(){
             const playerRight = this.x + this.width;
 
             const previousBottom = playerBottom - this.velocityY;
+            const prevTop = playerTop - this.velocityY;
+            const prevRight = playerRight - this.velocityX;
+            const prevLeft = playerLeft - this.velocityX;
+
 
             const platformTop = platform.y;
             const platformLeft = platform.x;
             const platformRight = platform.x + platform.width;
+            const platformBottom = platform.y + platform.height;
 
             if (
                 previousBottom <= platformTop &&
@@ -107,6 +115,34 @@ window.addEventListener('load', function(){
                 this.velocityY = 0;
                 this.onGround = true;
                 this.maxjump = 2;
+            }
+
+            if (
+                prevRight <= platformLeft &&
+                playerRight >= platformLeft &&
+                playerBottom > platformTop &&
+                playerTop < platformBottom
+            ) {
+                this.x = platformLeft - this.width;
+            }
+
+            if (
+                prevLeft >= platformRight &&
+                playerLeft <= platformRight &&
+                playerBottom > platformTop &&
+                playerTop < platformBottom
+            ) {
+                this.x = platformRight + this.width;
+            }
+
+            if (
+                prevTop >= platform.y + platform.height &&
+                playerTop <= platform.y + platform.height &&
+                playerRight > platform.x &&
+                playerLeft < platform.x + platform.width
+            ) {
+                this.y = platform.y + platform.height;
+                this.velocityY = 0;
             }
 
             });
@@ -274,21 +310,27 @@ window.addEventListener('load', function(){
 
 
     class Platform{
-        constructor(game,x,y,width,height){
+        constructor(game,x,y,width,height,image = null){
             this.game = game;
             this.x = x;
             this.y = y;
             this.width = width;
             this.height = height;
 
-            this.Image =  Image;
+            this.image =  image;
            
 
         }
 
         draw(context){
 
-            // logic for platform to draw
+           if(this.image){
+            context.drawImage(this.image,this.x,this.y,this.width,this.height);
+           } else {
+                context.fillStyle = 'red';
+                context.fillRect(this.x,this.y,this.width,this.height);
+           }
+
 
 
         }
@@ -312,7 +354,9 @@ window.addEventListener('load', function(){
             this.Obstacles = []
             this.Platforms = []
 
-            this.Platforms.push(new Platform(this, 0,  600, 1200, 200));
+            this.Platforms.push(new Platform(this, 0,  600, 1200, 200,this.background.undergrass));
+            this.Platforms.push(new Platform(this, 400,  360, 500, 100));
+
 
 
 
