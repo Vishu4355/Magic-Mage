@@ -7,7 +7,7 @@ window.addEventListener('load', function(){
     const canvas = document.getElementById('mycan1');
     const ctx = canvas.getContext('2d');
     canvas.width = 1200;
-    canvas.height = 730;
+    canvas.height = 720;
 
     class Player {
 
@@ -355,7 +355,7 @@ window.addEventListener('load', function(){
             this.Platforms = []
 
             this.Platforms.push(new Platform(this, 0,  600, 1200, 200,this.background.undergrass));
-            this.Platforms.push(new Platform(this, 400,  360, 500, 100));
+            this.Platforms.push(new Platform(this, 400,  360, 500, 10));
 
 
 
