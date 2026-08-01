@@ -21,21 +21,89 @@ window.addEventListener('load', function(){
             this.speedy = 0;
             this.velocityX = 0;
             this.velocityY = 0;
-            this.gravity = 0.7;
-            this.jumpForce = -18;
+            this.gravity = 0.5;
+            this.jumpForce = -16;
             this.maxjump = 2;
             this.onGround = false;
             this.jumpPressed = false;
+            this.spritewidth = 128;
+            this.spriteheight = 128;
+            this.drawwidth = 128;
+            this.drawheight = 128;
+            this.drawOffsetX = -32;
+            this.drawOffsetY = -64;
+            this.facing = 1;  // 1 = right and -1 = left
+        
+
+
+
+            // Animation
+
+            this.frameX = 0;
+            this.frametimer = 0;
+            this.frameinterval = 5;
+
+            // load Animation
+
+            this.animations = {
+                idle: { image: new Image(), frames: 8  },
+                run : { image: new Image(), frames: 8  },
+                jump : { image: new Image(), frames: 8  },
+                walk : { image: new Image(), frames: 7  }
+            }
+
+            this.animations.idle.image.src = "assets/Wanderer Magican/Idle.png";
+            this.animations.run.image.src = "assets/Wanderer Magican/Run.png";
+            this.animations.jump.image.src = "assets/Wanderer Magican/Jump.png";
+            this.animations.walk.image.src = "assets/Wanderer Magican/Walk.png";
+
+
+            this.currentAnimation = this.animations.idle;
+            this.previousAnimation = this.currentAnimation;
 
 
         }
 
 
-        draw(context){
-            context.fillStyle = 'black';
-           context.fillRect(this.x,this.y,this.width,this.height);
+        draw(context) {
+
+            context.save();
+
+            if (this.facing === -1) {
+                context.scale(-1, 1);
+
+                context.drawImage(
+                    this.currentAnimation.image,
+                    this.frameX * this.spritewidth,
+                    0,
+                    this.spritewidth,
+                    this.spriteheight,
+
+                    -(this.x + this.drawOffsetX + this.drawwidth),
+                    this.y + this.drawOffsetY,
+                    this.drawwidth,
+                    this.drawheight
+                );
+            } else {
+                context.drawImage(
+                    this.currentAnimation.image,
+                    this.frameX * this.spritewidth,
+                    0,
+                    this.spritewidth,
+                    this.spriteheight,
+
+                    this.x + this.drawOffsetX,
+                    this.y + this.drawOffsetY,
+                    this.drawwidth,
+                    this.drawheight
+                );
+            }
+
+            context.restore();
+        }
+
            
-        }
+        
 
 
         update(){
@@ -46,15 +114,17 @@ window.addEventListener('load', function(){
             this.speedx = 0;
             this.speedy = 0;
 
-            const speed = 5;
+            const speed = 2.5;
 
 
             if (this.game.keys.ArrowRight || this.game.keys.d) {
                 this.speedx = speed;
+                this.facing = 1;
             }
 
             if (this.game.keys.ArrowLeft || this.game.keys.a) {
                 this.speedx = -speed;
+                this.facing = -1;
             }
 
             this.velocityX = this.speedx;
@@ -142,7 +212,7 @@ window.addEventListener('load', function(){
                 playerLeft < platform.x + platform.width
             ) {
                 this.y = platform.y + platform.height;
-                this.velocityY = 0;
+                this.velocityY = 1;
             }
 
             });
@@ -159,11 +229,48 @@ window.addEventListener('load', function(){
                  this.y = 0;
             }
 
-        }
+            // choosing Animations
 
-        
+            if(!this.onGround) {
+
+                this.currentAnimation = this.animations.jump;
+
+            }else if (this.speedx !== 0) {
+                this.currentAnimation = this.animations.run;
+
+            }else {
+                this.currentAnimation = this.animations.idle;
+            }
+
+            if (this.currentAnimation !== this.previousAnimation) {
+
+                this.frameX = 0;
+
+                this.previousAnimation = this.currentAnimation;
+
+            }
+
+            // Animate
+
+            this.frametimer++;
+
+            if (this.frametimer >= this.frameinterval) {
+                this.frametimer = 0;
+                this.frameX++;
+
+                if (this.frameX >= this.currentAnimation.frames) {
+                    this.frameX = 0;
+                }
+            } 
+            
+        }    
+
+
+
+            
 
     }
+
 
 
     class Background {
