@@ -15,15 +15,34 @@ window.addEventListener('load', function(){
             this.game = game;
             this.width = 64;
             this.height = 64;
+
+            // Hitbox (physics body)
+
+            this.hitboxWidth = 44;
+            this.hitboxHeight = 60;
+
+            this.hitboxOffsetX = 10;
+            this.hitboxOffsetY = 4;
+            
             this.x = this.game.width * 0.5;
             this.y = this.game.height * 0.5;
-            this.speedx = 0;
             this.speedy = 0;
+            this.maxSpeed = 4;
             this.velocityX = 0;
             this.velocityY = 0;
+
+            // Acccleration and Gravity
+
+            this.groundAcceleration = 0.45;
+            this.airAcceleration = 0.22;
+
+            this.groundFriction = 0.35;
+            this.airFriction = 0.04;
             this.gravity = 0.5;
+
+
             this.jumpForce = -16;
-            this.maxjump = 2;
+            this.maxJump = 2;
             this.onGround = false;
             this.jumpPressed = false;
             this.spritewidth = 128;
@@ -33,6 +52,8 @@ window.addEventListener('load', function(){
             this.drawOffsetX = -32;
             this.drawOffsetY = -64;
             this.facing = 1;  // 1 = right and -1 = left
+            this.coyoteTime = 8;
+            this.coyoteTimer = 0;
         
 
 
@@ -109,38 +130,78 @@ window.addEventListener('load', function(){
         update(){
 
 
+            const acceleration = this.onGround
+                ? this.groundAcceleration
+                : this.airAcceleration;
 
-
-            this.speedx = 0;
-            this.speedy = 0;
-
-            const speed = 2.5;
-
+            const friction = this.onGround
+                ? this.groundFriction
+                : this.airFriction;
 
             if (this.game.keys.ArrowRight || this.game.keys.d) {
-                this.speedx = speed;
+
+                this.velocityX += acceleration;
                 this.facing = 1;
-            }
 
-            if (this.game.keys.ArrowLeft || this.game.keys.a) {
-                this.speedx = -speed;
+            }
+            else if (this.game.keys.ArrowLeft || this.game.keys.a) {
+
+                this.velocityX -= acceleration;
                 this.facing = -1;
+
             }
+            else {
 
-            this.velocityX = this.speedx;
-
-           if (this.game.keys[" "]) {
-
-                if (!this.jumpPressed && this.maxjump > 0) {
-                    this.velocityY = this.jumpForce;
-                    this.maxjump--;
-                    this.jumpPressed = true;
+                // Slow down when no key is held
+                if (this.velocityX > 0) {
+                    this.velocityX -= friction;
+                    if (this.velocityX < 0) this.velocityX = 0;
                 }
 
-           } else {
+                if (this.velocityX < 0) {
+                    this.velocityX += friction;
+                    if (this.velocityX > 0) this.velocityX = 0;
+                }
 
+            }
+
+
+            this.velocityX = Math.max(
+                -this.maxSpeed,
+                 Math.min(this.velocityX, this.maxSpeed)
+            );
+
+
+
+
+            
+           if (this.game.keys[" "]) {
+
+                if (!this.jumpPressed) {
+
+                    // Ground jump or coyote jump
+                    if (this.onGround || this.coyoteTimer > 0) {
+                    this.velocityY = this.jumpForce;
+                    this.onGround = false;
+                    this.coyoteTimer = 0;
+                    this.maxJump = 1;          // One jump remaining (double jump)
+                    
+                    }
+
+                     // Double jump
+                     else if (this.maxJump > 0) {
+                     this.velocityY = this.jumpForce;
+                     this.maxJump--;
+                     }
+
+                    this.jumpPressed = true;
+                  }
+
+            } else {
                 this.jumpPressed = false;
             }
+
+
 
 
             this.velocityY += this.gravity;
@@ -158,10 +219,10 @@ window.addEventListener('load', function(){
 
             this.game.Platforms.forEach(platform => {
 
-            const playerTop = this.y;
-            const playerBottom = this.y + this.height;
-            const playerLeft = this.x;
-            const playerRight = this.x + this.width;
+            const playerTop = this.y + this.hitboxOffsetY;
+            const playerBottom = playerTop + this.hitboxHeight;
+            const playerLeft = this.x + this.hitboxOffsetX;
+            const playerRight = playerLeft + this.hitboxWidth;
 
             const previousBottom = playerBottom - this.velocityY;
             const prevTop = playerTop - this.velocityY;
@@ -181,11 +242,13 @@ window.addEventListener('load', function(){
                 playerLeft < platformRight &&
                 this.velocityY > 0
             ) {
-                this.y = platformTop - this.height;
+                this.y = platformTop - this.hitboxHeight - this.hitboxOffsetY;
                 this.velocityY = 0;
                 this.onGround = true;
-                this.maxjump = 2;
+                this.maxJump = 2;
             }
+
+
 
             if (
                 prevRight <= platformLeft &&
@@ -193,7 +256,8 @@ window.addEventListener('load', function(){
                 playerBottom > platformTop &&
                 playerTop < platformBottom
             ) {
-                this.x = platformLeft - this.width;
+                this.x = platformLeft - this.hitboxWidth - this.hitboxOffsetX;
+                this.velocityX = 0;
             }
 
             if (
@@ -202,7 +266,8 @@ window.addEventListener('load', function(){
                 playerBottom > platformTop &&
                 playerTop < platformBottom
             ) {
-                this.x = platformRight + this.width;
+                this.x = platformRight - this.hitboxOffsetX;
+                this.velocityX = 0;
             }
 
             if (
@@ -211,11 +276,17 @@ window.addEventListener('load', function(){
                 playerRight > platform.x &&
                 playerLeft < platform.x + platform.width
             ) {
-                this.y = platform.y + platform.height;
+                this.y = platformBottom - this.hitboxOffsetY;
                 this.velocityY = 1;
             }
 
             });
+
+            if (this.onGround) {
+                this.coyoteTimer = this.coyoteTime;
+            } else if (this.coyoteTimer > 0) {
+                this.coyoteTimer--;
+            }
 
 
 
@@ -235,7 +306,7 @@ window.addEventListener('load', function(){
 
                 this.currentAnimation = this.animations.jump;
 
-            }else if (this.speedx !== 0) {
+            }else if (Math.abs(this.velocityX) > 0.1) {
                 this.currentAnimation = this.animations.run;
 
             }else {
