@@ -25,7 +25,7 @@ window.addEventListener('load', function(){
             this.hitboxOffsetY = 4;
             
             this.x = this.game.width * 0.5;
-            this.y = this.game.height * 0.5;
+            this.y = this.game.groundY - 150;
             this.speedy = 0;
             this.maxSpeed = 4;
             this.velocityX = 0;
@@ -271,10 +271,10 @@ window.addEventListener('load', function(){
             }
 
             if (
-                prevTop >= platform.y + platform.height &&
-                playerTop <= platform.y + platform.height &&
-                playerRight > platform.x &&
-                playerLeft < platform.x + platform.width
+                prevTop >= platformBottom &&
+                playerTop <= platformBottom &&
+                playerRight > platformLeft &&
+                playerLeft < platformRight
             ) {
                 this.y = platformBottom - this.hitboxOffsetY;
                 this.velocityY = 1;
@@ -293,12 +293,10 @@ window.addEventListener('load', function(){
             this.x = Math.max(
                  0,
                  Math.min(this.x,
-                 this.game.width - this.width)
+                 this.game.worldWidth - this.width)
             );
 
-            if (this.y < 0) {
-                 this.y = 0;
-            }
+           
 
             // choosing Animations
 
@@ -349,113 +347,70 @@ window.addEventListener('load', function(){
         constructor(game) {
             this.game = game;
 
-            this.skyimg = new Image();
-            this.skyimg.src = "assets/Multi_Platformer_Tileset_Free/GrassLand/Background/GrassLand_Background_1.png"
+            // sky 
 
-            this.skyimg.onload = () => {
-            console.log("Sky loaded");
-            console.log(this.skyimg.naturalWidth, this.skyimg.naturalHeight);
-            this.game.render(ctx);
-            };
-
+          
            
-            this.gravel = new Image();
-            this.gravel.src = "assets/Multi_Platformer_Tileset_Free/GrassLand/Background/GrassLand_Background_2.png"
+            this.back = new Image();
+            this.back.src = "assets/Layers/back.png"
+           
 
-            this.gravel.onload = () => {
-            console.log("Sky loaded");
-            console.log(this.gravel.naturalWidth, this.gravel.naturalHeight);
-            this.game.render(ctx);
-            };
+            this.middle = new Image();
+            this.middle.src = "assets/Layers/middle.png"
 
-            this.plain = new Image();
-            this.plain.src = "assets/Multi_Platformer_Tileset_Free/GrassLand/Background/GrassLand_Background_3.png"
+            this.backheight = 400;
+            this.middleheight = 380 ;
 
-            this.plain.onload = () => {
-            console.log("Sky loaded");
-            console.log(this.plain.naturalWidth, this.plain.naturalHeight);
-            this.game.render(ctx);
-            };
+            
 
-            this.grass = new Image();
-            this.grass.src = "assets/Multi_Platformer_Tileset_Free/GrassLand/Background/GrassLand_Background_4.png"
+            
 
-            this.grass.onload = () => {
-            console.log("Sky loaded");
-            console.log(this.grass.naturalWidth, this.grass.naturalHeight);
-            this.game.render(ctx);
-            };
-
-            this.undergrass = new Image();
-            this.undergrass.src = "assets/Multi_Platformer_Tileset_Free/GrassLand/Background/GrassLand_Background_5.png"
-
-            this.undergrass.onload = () => {
-            console.log("Sky loaded");
-            console.log(this.undergrass.naturalWidth, this.undergrass.naturalHeight);
-            this.game.render(ctx);
-            };
-
-            // Height
+        }
 
 
-            this.gravelHeight = 650;
-            this.plainHeight = 670;
-            this.grassHeight = 680;
-            this.undergrassHeight = 500;
+        // sky
 
+        drawSky(context){
 
-            // Overlap 
+                const gradient = context.createLinearGradient(
+                    0,0,
+                    0,this.game.height
+                );
 
-            const Overlap = 40;
+                gradient.addColorStop(0,"#0f021f");
+                gradient.addColorStop(1,"#070000");
 
-            // Position
-
-            this.undergrassY = this.game.height - this.undergrassHeight;
-            this.grassY = this.game.height - this.grassHeight + Overlap;
-            this.plainY = this.game.height  - this.plainHeight + Overlap;
-            this.gravelY = this.game.height - this.gravelHeight + Overlap;
-
-
-
-
-
-
+                context.fillStyle = gradient;
+                context.fillRect(
+                    0,
+                    0,
+                    this.game.width,
+                    this.game.height
+                );
         }
 
         draw(context) {
 
 
-
-            context.drawImage(this.skyimg,0,0,this.game.width, this.game.height);
-
-
-
-            const gravelTileWidth = this.gravel.naturalWidth || 416;
-            for(let x = 0; x< this.game.width; x += gravelTileWidth) {
-                context.drawImage(this.gravel, x, this.gravelY, gravelTileWidth,this.gravelHeight);
-            }
+             const backY = this.game.groundY - this.backheight ;
+             const middleY = this.game.groundY - this.middleheight ;
 
 
-            const plainTileWidth = this.plain.naturalWidth || 368;
-            for(let x = 0; x< this.game.width; x += plainTileWidth) {
-                context.drawImage(this.plain, x, this.plainY, plainTileWidth,this.plainHeight);
-            }
-
-
-            
-            const grassTileWidth = this.grass.naturalWidth || 448;
-            for(let x = 0; x< this.game.width; x += grassTileWidth) {
-                context.drawImage(this.grass, x, this.grassY, grassTileWidth,this.grassHeight);
+            const backWidth = this.back.naturalWidth || 240;
+            for(let x = 0; x< this.game.worldWidth; x += backWidth) {
+                context.drawImage(this.back, x, backY, backWidth, this.backheight);
             }
 
 
 
-
-
-            const undergrassTileWidth = this.undergrass.naturalWidth || 368;
-            for(let x = 0; x< this.game.width; x += undergrassTileWidth) {
-                context.drawImage(this.undergrass, x, this.undergrassY, undergrassTileWidth,this.undergrassHeight);
+            const middleWidth = this.middle.naturalWidth || 240;
+            for(let x = 0; x< this.game.worldWidth; x += middleWidth) {
+                context.drawImage(this.middle, x, middleY, middleWidth,this.middleheight);
             }
+
+
+        
+
 
 
 
@@ -488,7 +443,7 @@ window.addEventListener('load', function(){
 
 
     class Platform{
-        constructor(game,x,y,width,height,image = null){
+        constructor(game,x,y,width,height,image = null, visible = true, tileY = false,fillColor = null){
             this.game = game;
             this.x = x;
             this.y = y;
@@ -496,23 +451,104 @@ window.addEventListener('load', function(){
             this.height = height;
 
             this.image =  image;
-           
+            this.visible = visible;
+            this.tileY = tileY;
+            this.fillColor = fillColor;
 
         }
 
         draw(context){
 
-           if(this.image){
-            context.drawImage(this.image,this.x,this.y,this.width,this.height);
-           } else {
-                context.fillStyle = 'red';
-                context.fillRect(this.x,this.y,this.width,this.height);
-           }
+            if (!this.visible) return;
 
+            if (this.image) {
 
+                const tileWidth = this.image.naturalWidth || 160;
+                const tileHeight = this.image.naturalHeight || this.height;
+
+                if (this.tileY) {
+                    for (let x = this.x; x < this.x + this.width; x += tileWidth) {
+                        for (let y = this.y; y < this.y + this.height; y += tileHeight) {
+
+                            // fill this exact tile cell first
+                            if (this.fillColor) {
+                                context.fillStyle = this.fillColor;
+                                context.fillRect(x, y, tileWidth, tileHeight);
+                            }
+
+                            // then draw the tile art on top, same size/position
+                            context.drawImage(this.image, x, y, tileWidth, tileHeight);
+                        }
+                    }
+                    
+                } else {
+
+                    for (let x = this.x; x < this.x + this.width; x += tileWidth) {
+
+                        if (this.fillColor) {
+                            context.fillStyle = this.fillColor;
+                            context.fillRect(x, this.y, tileWidth, this.height);
+                        }
+
+                        context.drawImage(this.image, x, this.y, tileWidth, this.height);
+                    }
+                }
+
+            } else {
+
+                context.fillStyle = 'brown';
+                context.fillRect(this.x, this.y, this.width, this.height);
+
+            }
 
         }
-    }      
+
+    }
+    
+    
+    class Camera {
+        constructor(game) {
+            this.game = game;
+
+            this.x = 0;
+            this.y = 0;
+
+            this.targetX = 0;
+            this.targetY = 0;
+        }
+
+        update(){
+
+            // for x target
+
+            this.targetX =
+            this.game.Player.x + this.game.Player.width/2 -
+            this.game.width / 2;
+
+            // for y target
+
+            this.targetY =
+            this.game.Player.y + this.game.Player.height/2 -
+            this.game.height / 2;
+
+            // Smooth MOvement
+
+
+            this.x += (this.targetX - this.x) * 0.1;
+
+
+            this.x = Math.max(0,Math.min(
+                this.x,
+                this.game.worldWidth - this.game.width )
+            );
+
+            
+
+            
+
+        }
+
+    }    
 
 
 
@@ -526,14 +562,51 @@ window.addEventListener('load', function(){
             this.canvas = canvas;
             this.width = this.canvas.width;
             this.height = this.canvas.height;
+            // world Size
+            this.worldWidth = 4000;
+            this.worldHeight = 720;
+            this.groundY = 620;
+            this.cameraBottom = 720;
+
+            
             this.background = new Background(this);
+
+            // ground image
+
+            this.groundImage = new Image();
+            this.groundImage.src = "assets/Layers/tileset.png";
+
+            this.backtile = new Image();
+            this.backtile.src = "assets\\back-tileset-trimmed.png";
+
+    
+           
+            
             this.Player = new Player(this);
+            this.camera = new Camera(this);
             this.noofobstacles = 5;
             this.Obstacles = []
             this.Platforms = []
+            this.groundDeco = []
 
-            this.Platforms.push(new Platform(this, 0,  600, 1200, 200,this.background.undergrass));
+
+
+          //  this.Platforms.push(new Platform(this, 0,  this.groundY-12, this.worldWidth,this.height - this.groundY,this.backtile,true,true));
+
+            this.Platforms.push(new Platform(this, 0,  this.groundY, this.worldWidth,this.height - this.groundY,null,false,false));
+
+            this.groundDecoration2 = new Platform(this, 0, this.groundY  , this.worldWidth,  80 , this.backtile, true, true,"#ffbf00");
+            this.groundDeco.push(this.groundDecoration2);
+
+
+            this.groundDecoration = new Platform(this, 0, this.groundY , this.worldWidth, 140, this.groundImage, true, true);
+          // this.groundDeco.push(this.groundDecoration);
+
+            
             this.Platforms.push(new Platform(this, 400,  360, 500, 10));
+            this.Platforms.push(new Platform(this, 1700, 450, 300, 20));
+            this.Platforms.push(new Platform(this, 2500, 300, 300, 20));
+            this.Platforms.push(new Platform(this,800,100,300,20));
 
 
 
@@ -583,11 +656,23 @@ window.addEventListener('load', function(){
 
 
         render(context) {
+            this.Player.update();
+            this.camera.update();
+            this.background.drawSky(context);
+
+            context.save();
+
+            context.translate(-this.camera.x, -this.camera.y);
+
+           
+
             this.background.draw(context);
             this.Platforms.forEach(platform => platform.draw((context)) );
-            this.Player.update();
+            this.groundDeco.forEach(ground => ground.draw(context));
             this.Player.draw(context);
           //  this.Obstacles.forEach(obstacle => obstacle.draw(context));
+
+            context.restore();
             
             
         }
