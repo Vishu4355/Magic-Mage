@@ -373,6 +373,9 @@ window.addEventListener('load', function(){
             this.backheight = 400;
             this.middleheight = 380 ;
 
+            this.moonParallax = 0.020;   // moon barely moves — very far away
+            this.cloudParallax = 0.01;  // clouds move a bit more — closer than the moon
+
             
 
             
@@ -403,10 +406,13 @@ window.addEventListener('load', function(){
 
 
 
-        drawMoon(context) {
+        drawMoon(context, cameraX) {
+
+            const ScreenX = 200 - cameraX * this.moonParallax;
+
             context.drawImage(
                 this.moon,
-                200,   // screen X
+                ScreenX,   // screen X
                 20,    // screen Y
                 this.moonSize,
                 this.moonSize
@@ -415,11 +421,15 @@ window.addEventListener('load', function(){
 
 
 
-        drawclouds(context) {
+        drawclouds(context, cameraX) {
             this.game.clouds.forEach(cloud => {
+
+                const screenX = ((cloud.x - cameraX * this.cloudParallax) % (this.game.width + cloud.width) 
+                + this.game.width + cloud.width) % (this.game.width + cloud.width) - cloud.width;
+
                 context.drawImage(
                     this.clouds,
-                    cloud.x,
+                    screenX,
                     cloud.y,
                     cloud.width,
                     cloud.height
@@ -556,40 +566,44 @@ window.addEventListener('load', function(){
             this.y = 0;
 
             this.targetX = 0;
-            this.targetY = 0;
+            
+            // deadzone
+
+            this.deadzoneWidth = 200;
             
         }
+
 
         update(){
 
-            // for x target
+                const deadzoneLeft  = this.x + this.game.width / 2 - this.deadzoneWidth / 2;
+                const deadzoneRight = this.x + this.game.width / 2 + this.deadzoneWidth / 2;
 
-            this.targetX =
-            this.game.Player.x + this.game.Player.width/2 -
-            this.game.width / 2;
+                const playerCenterX = this.game.Player.x + this.game.Player.width / 2;
 
-            // for y target
+                let targetX = this.x;
 
-            this.targetY =
-            this.game.Player.y + this.game.Player.height/2 -
-            this.game.height / 2;
+                if (playerCenterX > deadzoneRight) {
+                    targetX = this.x + (playerCenterX - deadzoneRight);
+                } else if (playerCenterX < deadzoneLeft) {
+                    targetX = this.x - (deadzoneLeft - playerCenterX);
+                }
 
-            // Smooth MOvement
+                this.x += (targetX - this.x) * 0.2; // smoothing factor, tweak to taste
 
+                this.x = Math.max(0, Math.min(
+                    this.x,
+                    this.game.worldWidth - this.game.width
+                ));
 
-            this.x += (this.targetX - this.x) * 0.1;
+            }
 
-
-            this.x = Math.max(0,Math.min(
-                this.x,
-                this.game.worldWidth - this.game.width )
-            );
-
+        
             
 
             
 
-        }
+        
 
     }    
 
@@ -657,7 +671,7 @@ window.addEventListener('load', function(){
 
             this.clouds = [
             { x: 100, y: 40, width: 140, height: 70 },
-            { x: 350, y: 90, width: 180, height: 90 },
+            { x: 300, y: 120, width: 180, height: 90 },
             { x: 700, y: 60, width: 160, height: 80 },
             { x: 950, y: 20, width: 150, height: 75 }
         ];
@@ -713,8 +727,8 @@ window.addEventListener('load', function(){
             this.Player.update();
             this.camera.update();
             this.background.drawSky(context);
-            this.background.drawMoon(context);
-            this.background.drawclouds(context);
+            this.background.drawMoon(context , this.camera.x);
+            this.background.drawclouds(context, this.camera.x);
             context.save();
 
             context.translate(-this.camera.x, -this.camera.y);
