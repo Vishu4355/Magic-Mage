@@ -347,7 +347,19 @@ window.addEventListener('load', function(){
         constructor(game) {
             this.game = game;
 
-            // sky 
+            // Moon
+
+            this.moon = new Image();
+
+            
+            this.moon.src = "assets/blood_moon.png";
+            this.moonSize = 180;
+
+            // clouds
+
+            this.clouds = new Image();
+            this.clouds.src = "assets/Multi_Platformer_Tileset_Free/GrassLand/Background/GrassLand_Cloud_3.png";
+            this.cloudSize = 100;
 
           
            
@@ -389,12 +401,38 @@ window.addEventListener('load', function(){
                 );
         }
 
+
+
+        drawMoon(context) {
+            context.drawImage(
+                this.moon,
+                200,   // screen X
+                20,    // screen Y
+                this.moonSize,
+                this.moonSize
+            );
+        }
+
+
+
+        drawclouds(context) {
+            this.game.clouds.forEach(cloud => {
+                context.drawImage(
+                    this.clouds,
+                    cloud.x,
+                    cloud.y,
+                    cloud.width,
+                    cloud.height
+                );
+            });
+   }
+
         draw(context) {
 
 
              const backY = this.game.groundY - this.backheight ;
              const middleY = this.game.groundY - this.middleheight ;
-
+          
 
             const backWidth = this.back.naturalWidth || 240;
             for(let x = 0; x< this.game.worldWidth; x += backWidth) {
@@ -403,11 +441,15 @@ window.addEventListener('load', function(){
 
 
 
+
+
             const middleWidth = this.middle.naturalWidth || 240;
             for(let x = 0; x< this.game.worldWidth; x += middleWidth) {
                 context.drawImage(this.middle, x, middleY, middleWidth,this.middleheight);
             }
 
+
+            
 
         
 
@@ -515,6 +557,7 @@ window.addEventListener('load', function(){
 
             this.targetX = 0;
             this.targetY = 0;
+            
         }
 
         update(){
@@ -588,6 +631,7 @@ window.addEventListener('load', function(){
             this.Obstacles = []
             this.Platforms = []
             this.groundDeco = []
+            this.clouds = []
 
 
 
@@ -595,7 +639,7 @@ window.addEventListener('load', function(){
 
             this.Platforms.push(new Platform(this, 0,  this.groundY, this.worldWidth,this.height - this.groundY,null,false,false));
 
-            this.groundDecoration2 = new Platform(this, 0, this.groundY  , this.worldWidth,  80 , this.backtile, true, true,"#ffbf00");
+            this.groundDecoration2 = new Platform(this, 0, this.groundY  , this.worldWidth,  80 , this.backtile, true, true,"hsl(9, 100%, 50%)");
             this.groundDeco.push(this.groundDecoration2);
 
 
@@ -607,6 +651,16 @@ window.addEventListener('load', function(){
             this.Platforms.push(new Platform(this, 1700, 450, 300, 20));
             this.Platforms.push(new Platform(this, 2500, 300, 300, 20));
             this.Platforms.push(new Platform(this,800,100,300,20));
+
+
+            //clouds
+
+            this.clouds = [
+            { x: 100, y: 40, width: 140, height: 70 },
+            { x: 350, y: 90, width: 180, height: 90 },
+            { x: 700, y: 60, width: 160, height: 80 },
+            { x: 950, y: 20, width: 150, height: 75 }
+        ];
 
 
 
@@ -659,7 +713,8 @@ window.addEventListener('load', function(){
             this.Player.update();
             this.camera.update();
             this.background.drawSky(context);
-
+            this.background.drawMoon(context);
+            this.background.drawclouds(context);
             context.save();
 
             context.translate(-this.camera.x, -this.camera.y);
