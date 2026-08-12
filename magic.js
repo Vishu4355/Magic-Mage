@@ -1,5 +1,12 @@
 console.log("magic.js loaded");
 
+// async func for lv
+
+async function loadLevel(path) {
+    const response = await fetch(path);
+    const data = await response.json();
+    return data;
+}
 
 
 
@@ -16,6 +23,16 @@ window.addEventListener('load', function(){
             this.width = 64;
             this.height = 64;
 
+            // Player Health
+
+            this.maxHearts = 3;
+            this.currentHearts = 3;
+
+            this.invincible = false;
+            this.invincibleTimer = 0;
+            this.invincibleDuration = 180;
+
+
             // Hitbox (physics body)
 
             this.hitboxWidth = 44;
@@ -24,7 +41,7 @@ window.addEventListener('load', function(){
             this.hitboxOffsetX = 10;
             this.hitboxOffsetY = 4;
             
-            this.x = this.game.width * 0.5;
+            this.x = this.game.width * 0.5 - 200;
             this.y = this.game.groundY - 150;
             this.speedy = 0;
             this.maxSpeed = 4;
@@ -90,6 +107,11 @@ window.addEventListener('load', function(){
 
             context.save();
 
+
+            if (this.invincible && Math.floor(this.invincibleTimer / 5) % 2 === 0) {
+                context.globalAlpha = 0.3;
+            }
+
             if (this.facing === -1) {
                 context.scale(-1, 1);
 
@@ -121,6 +143,60 @@ window.addEventListener('load', function(){
             }
 
             context.restore();
+        }
+
+
+        drawHearts(context) {
+
+            const heartSize = 24;
+            const padding = 6;
+            const startX = 20;
+            const startY = 20;
+
+            for (let i = 0; i < this.maxHearts; i++) {
+
+                const x = startX + i * (heartSize + padding);
+
+                context.fillStyle = i < this.currentHearts ? "red" : "gray";
+                context.fillRect(x, startY, heartSize, heartSize);
+            }
+        }
+
+
+        die() {
+
+            console.log("Player died!");
+            // for now, just reset hearts and teleport back to spawn
+            this.currentHearts = this.maxHearts;
+            this.game.score = 0;
+            this.x = this.game.playerStartX ?? this.game.width * 0.5 -200;
+            this.y = this.game.playerStartY ?? this.game.groundY - 150;
+
+             this.game.Collectibles.forEach(item => {
+                item.collected = false;
+            });
+        }
+
+
+        takeDamage(amount =1){
+
+            if(this.invincible) return;
+
+            this.currentHearts -= amount;
+
+            if (this.currentHearts < 0){
+
+                this.currentHearts= 0;
+            }
+
+            this.invincible = true;
+            this.invincibleTimer = this.invincibleDuration;
+
+            if (this.currentHearts <= 0){
+                this.die()
+            }
+
+
         }
 
            
@@ -214,6 +290,14 @@ window.addEventListener('load', function(){
 
             this.onGround = false;
 
+
+           if (this.invincible) {
+
+                this.invincibleTimer--;
+                if (this.invincibleTimer <= 0) {
+                    this.invincible = false;
+                }
+            }
 
             // collision logic
 
@@ -556,8 +640,91 @@ window.addEventListener('load', function(){
         }
 
     }
+
+
+    class Hazard{
+        constructor(game,x,y,width,height,type){
+
+            this.game = game;
+            this.x = x;
+            this.y = y;
+            this.width = width;
+            this.height = height;
+            this.width = width;
+            this.type = type;
+        }
+
+
+        draw(context) {
+        context.fillStyle = this.type === "lava" ? "orangered" : "gray";
+        context.fillRect(this.x, this.y, this.width, this.height);
+        }
+
+
+        checkCollision(player) {
+
+        const playerLeft = player.x + player.hitboxOffsetX;
+        const playerRight = playerLeft + player.hitboxWidth;
+        const playerTop = player.y + player.hitboxOffsetY;
+        const playerBottom = playerTop + player.hitboxHeight;
+
+        const overlap =
+            playerRight > this.x &&
+            playerLeft < this.x + this.width &&
+            playerBottom > this.y &&
+            playerTop < this.y + this.height;
+
+        if (overlap) {
+            player.takeDamage(1);
+        }
+
+        }    
+
+    }
+
+
+    class Collectible {
+
+        constructor(game, x, y, width, height) {
+            this.game = game;
+            this.x = x;
+            this.y = y;
+            this.width = width;
+            this.height = height;
+            this.collected = false;
+        }
+
+        draw(context) {
+            if (this.collected) return;
+
+            context.fillStyle = "gold";
+            context.fillRect(this.x, this.y, this.width, this.height);
+        }
+
+        checkCollision(player) {
+
+            if (this.collected) return;
+
+            const playerLeft = player.x + player.hitboxOffsetX;
+            const playerRight = playerLeft + player.hitboxWidth;
+            const playerTop = player.y + player.hitboxOffsetY;
+            const playerBottom = playerTop + player.hitboxHeight;
+
+            const overlap =
+                playerRight > this.x &&
+                playerLeft < this.x + this.width &&
+                playerBottom > this.y &&
+                playerTop < this.y + this.height;
+
+            if (overlap) {
+                this.collected = true;
+                this.game.score += 1;
+            }
+        }
+    }
     
-    
+
+
     class Camera {
         constructor(game) {
             this.game = game;
@@ -615,13 +782,14 @@ window.addEventListener('load', function(){
 
 
     class Game {
-        constructor(canvas){
+        constructor(canvas, leveldata){
             this.canvas = canvas;
             this.width = this.canvas.width;
             this.height = this.canvas.height;
+            this.leveldata = leveldata;
             // world Size
-            this.worldWidth = 4000;
-            this.worldHeight = 720;
+            this.worldWidth = leveldata.width * leveldata.tilewidth;
+            this.worldHeight = leveldata.height * leveldata.tileheight;
             this.groundY = 620;
             this.cameraBottom = 720;
 
@@ -636,6 +804,11 @@ window.addEventListener('load', function(){
             this.backtile = new Image();
             this.backtile.src = "assets\\back-tileset-trimmed.png";
 
+            this.tilesetImage = new Image();
+            this.tilesetImage.src = "assets/tiles.png";
+            this.tilesetImage.onload = () => console.log("Tileset loaded!", this.tilesetImage.width, this.tilesetImage.height);
+            this.tilesetImage.onerror = () => console.log("Tileset FAILED to load — check the path");
+
     
            
             
@@ -646,6 +819,21 @@ window.addEventListener('load', function(){
             this.Platforms = []
             this.groundDeco = []
             this.clouds = []
+            
+            this.score =0;
+            // platform 
+            this.loadPlatformsFromLevel();
+
+            // hazards
+
+            this.Hazards = [];
+            this.loadHazardsFromLevel();
+
+            // collectibles
+
+            this.Collectibles = [];
+            this.loadCollectiblesFromLevel();
+
 
 
 
@@ -661,11 +849,7 @@ window.addEventListener('load', function(){
           // this.groundDeco.push(this.groundDecoration);
 
             
-            this.Platforms.push(new Platform(this, 400,  360, 500, 10));
-            this.Platforms.push(new Platform(this, 1700, 450, 300, 20));
-            this.Platforms.push(new Platform(this, 2500, 300, 300, 20));
-            this.Platforms.push(new Platform(this,800,100,300,20));
-
+            
 
             //clouds
 
@@ -723,6 +907,114 @@ window.addEventListener('load', function(){
         }
 
 
+       drawTileLayer(context) {
+
+            const tileset = this.leveldata.tilesets[0];
+            const tileLayer = this.leveldata.layers.find(l => l.name === "Tile Layer 1");
+
+            if (!tileset || !tileLayer || !this.tilesetImage.complete) return;
+
+            const tw = this.leveldata.tilewidth;
+            const th = this.leveldata.tileheight;
+            const columns = tileset.columns;
+            const firstgid = tileset.firstgid;
+            const margin = tileset.margin || 0;
+            const spacing = tileset.spacing || 0;
+
+            const FLIPPED_HORIZONTALLY_FLAG = 0x80000000;
+            const FLIPPED_VERTICALLY_FLAG   = 0x40000000;
+            const FLIPPED_DIAGONALLY_FLAG   = 0x20000000;
+
+            for (let row = 0; row < tileLayer.height; row++) {
+                for (let col = 0; col < tileLayer.width; col++) {
+
+                    const index = row * tileLayer.width + col;
+                    const gid = tileLayer.data[index];
+
+                    if (gid === 0) continue;
+
+                    // strip out flip flags to get the real tile id
+                    const realGid = gid & ~(FLIPPED_HORIZONTALLY_FLAG | FLIPPED_VERTICALLY_FLAG | FLIPPED_DIAGONALLY_FLAG);
+
+                    const tileIndex = realGid - firstgid;
+
+                    const sx = margin + (tileIndex % columns) * (tw + spacing);
+                    const sy = margin + Math.floor(tileIndex / columns) * (th + spacing);
+
+                    context.drawImage(
+                        this.tilesetImage,
+                        sx, sy, tw, th,
+                        col * tw, row * th, tw, th
+                    );
+                }
+            }
+        }
+
+
+        
+
+        drawScore(context) {
+            context.font = "bold 24px sans-serif";
+
+            context.lineWidth = 2;
+            context.strokeStyle = "black";
+            context.strokeText(`Score: ${this.score}`, 20, 150);   // outline first
+
+            context.fillStyle = "red";
+            context.fillText(`Score: ${this.score}`, 20, 150);     // then fill on top
+        }
+       
+        
+
+
+        loadPlatformsFromLevel() {
+
+            const collisionLayer = this.leveldata.layers.find(
+                layer => layer.name === "collision"
+            );
+
+            if (!collisionLayer) return;
+
+            collisionLayer.objects.forEach(obj => {
+                this.Platforms.push(
+                    new Platform(this, obj.x, obj.y, obj.width, obj.height)
+                );
+            });
+        }
+
+
+        loadHazardsFromLevel() {
+
+            const lavaLayer = this.leveldata.layers.find(l => l.name === "lava");
+            lavaLayer?.objects.forEach(obj => {
+                this.Hazards.push(
+                    new Hazard(this, obj.x, obj.y, obj.width, obj.height, "lava")
+                );
+            });
+
+            const spikesLayer = this.leveldata.layers.find(l => l.name === "spikes");
+            spikesLayer?.objects.forEach(obj => {
+                this.Hazards.push(
+                    new Hazard(this, obj.x, obj.y, obj.width, obj.height, "spikes")
+                );
+            });
+        }
+
+
+        loadCollectiblesFromLevel() {
+
+            const collectLayer = this.leveldata.layers.find(l => l.name === "collect");
+            if (!collectLayer) return;
+
+            collectLayer.objects.forEach(obj => {
+                this.Collectibles.push(
+                    new Collectible(this, obj.x, obj.y, obj.width, obj.height)
+                );
+            });
+        }
+
+
+
         render(context) {
             this.Player.update();
             this.camera.update();
@@ -733,15 +1025,28 @@ window.addEventListener('load', function(){
 
             context.translate(-this.camera.x, -this.camera.y);
 
+            
+
            
 
             this.background.draw(context);
-            this.Platforms.forEach(platform => platform.draw((context)) );
+            this.drawTileLayer(context);
+           // this.Platforms.forEach(platform => platform.draw((context)) );
             this.groundDeco.forEach(ground => ground.draw(context));
+
+            this.Hazards.forEach(hazard => hazard.checkCollision(this.Player));
+            this.Hazards.forEach(hazard => hazard.draw(context));
+
+            this.Collectibles.forEach(item => item.checkCollision(this.Player));
+            this.Collectibles.forEach(item => item.draw(context));
+
             this.Player.draw(context);
           //  this.Obstacles.forEach(obstacle => obstacle.draw(context));
 
             context.restore();
+
+            this.Player.drawHearts(context);
+            this.drawScore(context);
             
             
         }
@@ -791,26 +1096,23 @@ window.addEventListener('load', function(){
 
 
 
-    const game = new Game(canvas);
-    game.Init();
-    console.log(game);
+    let game;
 
-
-
-
+    loadLevel("assets/level 1 mm.tmj").then(levelData => {
+        game = new Game(canvas, levelData);
+        game.Init();
+        console.log(game);
+        animate();
+    });
 
     function animate(){
-
-        ctx.clearRect(0,0, canvas.width, canvas.height);
-
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
         game.render(ctx);
         requestAnimationFrame(animate);
-
-
     }
 
 
-    animate()
+    
 
 
    
