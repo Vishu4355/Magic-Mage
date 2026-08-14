@@ -9,6 +9,61 @@ async function loadLevel(path) {
 }
 
 
+const ENEMY_TYPES = {
+    soldier_fire: {
+        health: 3,
+        patrolSpeed: 1,
+        damage: 1,
+        attackPatterns: ["meleeSwing" , "fireDash"],
+        color: "orangered"
+    }
+};
+
+
+const ATTACK_PATTERNS = {
+
+    meleeSwing(enemy, player) {
+
+        if (enemy.attackCooldown > 0) return;
+
+        const playerLeft = player.x + player.hitboxOffsetX;
+        const playerRight = playerLeft + player.hitboxWidth;
+        const playerTop = player.y + player.hitboxOffsetY;
+        const playerBottom = playerTop + player.hitboxHeight;
+
+        const enemyLeft = enemy.x;
+        const enemyRight = enemy.x + enemy.width;
+        const enemyTop = enemy.y;
+        const enemyBottom = enemy.y + enemy.height;
+
+        const overlap =
+            playerRight > enemyLeft &&
+            playerLeft < enemyRight &&
+            playerBottom > enemyTop &&
+            playerTop < enemyBottom;
+
+        if (overlap) {
+            player.takeDamage(enemy.config.damage, `enemy-${enemy.typeKey}`);
+            enemy.attackCooldown = 60;
+        }
+    },
+
+
+    fireDash(enemy, player) {
+
+        if (enemy.attackCooldown > 0) return;
+
+        const distance = Math.abs(player.x - enemy.x);
+
+        if (distance < 200 && distance > 60) {
+            enemy.velocityX = player.x > enemy.x ? 5 : -5;
+            enemy.attackCooldown = 90;
+        }
+    }
+};
+
+
+
 
 window.addEventListener('load', function(){
     const canvas = document.getElementById('mycan1');
@@ -178,9 +233,12 @@ window.addEventListener('load', function(){
         }
 
 
-        takeDamage(amount =1){
+        takeDamage(amount =1 , source = 'unkown'){
 
             if(this.invincible) return;
+
+            console.log("Took damage from:", source); // TEMP DEBUG
+
 
             this.currentHearts -= amount;
 
@@ -675,7 +733,10 @@ window.addEventListener('load', function(){
             playerTop < this.y + this.height;
 
         if (overlap) {
-            player.takeDamage(1);
+           if (overlap) {
+
+                player.takeDamage(1, `hazard-${this.type}`);
+}
         }
 
         }    
@@ -719,10 +780,140 @@ window.addEventListener('load', function(){
             if (overlap) {
                 this.collected = true;
                 this.game.score += 1;
+                
             }
         }
     }
-    
+
+
+
+    class Enemy {
+
+        constructor(game, x, y, width, height, typeKey) {
+
+            this.game = game;
+            this.x = x;
+            this.y = y;
+            this.width = width;
+            this.height = height;
+            this.typeKey = typeKey;
+
+            this.config = ENEMY_TYPES[typeKey];
+
+            this.health = this.config.health;
+            this.maxHealth = this.config.health;
+            this.alive = true;
+
+            this.state = "patrol";
+
+            this.velocityX = this.config.patrolSpeed;
+            this.velocityY = 0;
+            this.gravity = 0.5;
+            this.onGround = false;
+
+            this.startX = x;
+            this.patrolRange = 100;
+
+            this.attackCooldown = 0;
+        }
+
+
+        updatePatrol() {
+
+            if (this.x > this.startX + this.patrolRange || this.x < this.startX - this.patrolRange) {
+                this.velocityX *= -1;
+            }
+        }
+
+
+        checkPlatformCollision() {
+
+            this.onGround = false;
+
+            this.game.Platforms.forEach(platform => {
+
+                const enemyTop = this.y;
+                const enemyBottom = this.y + this.height;
+                const enemyLeft = this.x;
+                const enemyRight = this.x + this.width;
+
+                const previousBottom = enemyBottom - this.velocityY;
+                const prevRight = enemyRight - this.velocityX;
+                const prevLeft = enemyLeft - this.velocityX;
+
+                const platformTop = platform.y;
+                const platformLeft = platform.x;
+                const platformRight = platform.x + platform.width;
+                const platformBottom = platform.y + platform.height;
+
+                if (
+                    previousBottom <= platformTop &&
+                    enemyBottom >= platformTop &&
+                    enemyRight > platformLeft &&
+                    enemyLeft < platformRight &&
+                    this.velocityY > 0
+                ) {
+                    this.y = platformTop - this.height;
+                    this.velocityY = 0;
+                    this.onGround = true;
+                }
+
+                if (
+                    prevRight <= platformLeft &&
+                    enemyRight >= platformLeft &&
+                    enemyBottom > platformTop &&
+                    enemyTop < platformBottom
+                ) {
+                    this.x = platformLeft - this.width;
+                    this.velocityX *= -1;
+                }
+
+                if (
+                    prevLeft >= platformRight &&
+                    enemyLeft <= platformRight &&
+                    enemyBottom > platformTop &&
+                    enemyTop < platformBottom
+                ) {
+                    this.x = platformRight;
+                    this.velocityX *= -1;
+                }
+            });
+        }
+
+
+        update() {
+
+            if (!this.alive) return;
+
+            if (this.attackCooldown > 0) {
+                this.attackCooldown--;
+            }
+
+            if (this.state === "patrol") {
+                this.updatePatrol();
+            }
+
+            this.config.attackPatterns.forEach(patternName => {
+                ATTACK_PATTERNS[patternName](this, this.game.Player);
+            });
+
+            this.velocityY += this.gravity;
+            this.x += this.velocityX;
+            this.y += this.velocityY;
+
+            this.checkPlatformCollision();
+        }
+
+
+        draw(context) {
+
+            if (!this.alive) return;
+
+            context.fillStyle = this.config.color;
+            context.fillRect(this.x, this.y, this.width, this.height);
+        }
+    }
+        
 
 
     class Camera {
@@ -833,6 +1024,11 @@ window.addEventListener('load', function(){
 
             this.Collectibles = [];
             this.loadCollectiblesFromLevel();
+
+            // enemies
+
+            this.Enemies = [];
+            this.loadEnemiesFromLevel();
 
 
 
@@ -1014,6 +1210,19 @@ window.addEventListener('load', function(){
         }
 
 
+        loadEnemiesFromLevel() {
+
+            const soldierLayer = this.leveldata.layers.find(l => l.name === "soldiers");
+            if (!soldierLayer) return;
+
+            soldierLayer.objects.forEach(obj => {
+                this.Enemies.push(
+                    new Enemy(this, obj.x, obj.y, obj.width, obj.height, "soldier_fire")
+                );
+            });
+        }
+
+
 
         render(context) {
             this.Player.update();
@@ -1039,6 +1248,9 @@ window.addEventListener('load', function(){
 
             this.Collectibles.forEach(item => item.checkCollision(this.Player));
             this.Collectibles.forEach(item => item.draw(context));
+
+            this.Enemies.forEach(enemy => enemy.update());
+            this.Enemies.forEach(enemy => enemy.draw(context));
 
             this.Player.draw(context);
           //  this.Obstacles.forEach(obstacle => obstacle.draw(context));

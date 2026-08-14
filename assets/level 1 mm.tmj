@@ -927,18 +927,6 @@
          "name":"soldiers",
          "objects":[
                 {
-                 "height":39,
-                 "id":20,
-                 "name":"",
-                 "opacity":1,
-                 "rotation":0,
-                 "type":"",
-                 "visible":true,
-                 "width":67,
-                 "x":1532,
-                 "y":583
-                }, 
-                {
                  "height":38,
                  "id":24,
                  "name":"",
