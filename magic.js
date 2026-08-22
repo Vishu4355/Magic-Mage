@@ -10,12 +10,109 @@ async function loadLevel(path) {
 
 
 const ENEMY_TYPES = {
+
     soldier_fire: {
         health: 3,
         patrolSpeed: 1,
         damage: 1,
-        attackPatterns: ["meleeSwing" , "fireDash"],
-        color: "orangered"
+        attackPatterns: ["meleeSwing", "rangedAttack"],
+        projectileType: "fireball",
+        color: "orangered",
+
+        spriteSrc: 'assets/Fire-haunt.png',
+        frameCount: 5,
+        spriteWidth: 112,   
+        spriteHeight: 128,
+        
+         drawWidth: 64,     // <-- how big it appears on screen
+         drawHeight: 74,     // <-- keeps the 112:128 aspect ratio roughly (64 * 128/112 ≈ 73)
+         drawOffsetX: -16,   // <-- centers the wider sprite over the collision box
+         drawOffsetY: -20    // <-- lifts sprite up so feet land at the right spot
+
+        
+    },
+
+    soldier_water: {
+        health: 3,
+        patrolSpeed: 1,
+        damage: 1,
+        attackPatterns: ["meleeSwing", "rangedAttack"],
+        projectileType: "waterRay",
+        color: "dodgerblue",
+
+        spriteSrc: 'assets/meerman.png',
+        frameCount: 2,
+        spriteWidth: 27,   
+        spriteHeight: 32,
+        
+         drawWidth: 64,     // <-- how big it appears on screen
+         drawHeight: 74,     // <-- keeps the 112:128 aspect ratio roughly (64 * 128/112 ≈ 73)
+         drawOffsetX: -16,   // <-- centers the wider sprite over the collision box
+         drawOffsetY: -20    // <-- lifts sprite up so feet land at the right spot
+
+
+    },
+
+    soldier_poison: {
+        health: 4,
+        patrolSpeed: 0.8,
+        damage: 1,
+        attackPatterns: ["rangedAttack"], // no melee — pure ranged type
+        projectileType: "poisonGlob",
+        color: "limegreen",
+
+        spriteSrc: 'assets/Treant.png',
+        frameCount: 4,
+        spriteWidth: 80,   
+        spriteHeight: 84,
+        
+         drawWidth: 64,     // <-- how big it appears on screen
+         drawHeight: 74,     // <-- keeps the 112:128 aspect ratio roughly (64 * 128/112 ≈ 73)
+         drawOffsetX: -16,   // <-- centers the wider sprite over the collision box
+         drawOffsetY: -20    // <-- lifts sprite up so feet land at the right spot
+    }
+};
+
+
+Object.keys(ENEMY_TYPES).forEach(typeKey => {
+    const config = ENEMY_TYPES[typeKey];
+    if (!config.spriteSrc) return;
+
+    const img = new Image();
+    img.src = config.spriteSrc;
+    config.spriteImage = img;
+});
+
+
+
+
+const PROJECTILE_TYPES = {
+
+    fireball: {
+        speed: 4,
+        width: 16,
+        height: 16,
+        color: "orange",
+        shape: "circle",
+        gravity: 0     // flies straight
+    },
+
+    waterRay: {
+        speed: 7,
+        width: 24,
+        height: 6,
+        color: "dodgerblue",
+        shape: "rect",  // a thin beam looks better as a rectangle than a circle
+        gravity: 0
+    },
+
+    poisonGlob: {
+        speed: 3,
+        width: 14,
+        height: 14,
+        color: "limegreen",
+        shape: "circle",
+        gravity: 0.05   // arcs downward like a lobbed blob
     }
 };
 
@@ -49,18 +146,149 @@ const ATTACK_PATTERNS = {
     },
 
 
-    fireDash(enemy, player) {
+    rangedAttack(enemy, player) {
 
         if (enemy.attackCooldown > 0) return;
 
         const distance = Math.abs(player.x - enemy.x);
 
-        if (distance < 200 && distance > 60) {
-            enemy.velocityX = player.x > enemy.x ? 5 : -5;
-            enemy.attackCooldown = 90;
+        if (distance < 400 && distance > 100 && enemy.attackWindup === 0) {
+            enemy.attackWindup = enemy.windupDuration;
+        }
+
+        if (enemy.attackWindup > 0) {
+            enemy.attackWindup--;
+
+            if (enemy.attackWindup === 0) {
+
+                const direction = player.x > enemy.x ? 1 : -1;
+                const projectileType = enemy.config.projectileType; // <-- reads from enemy's own config
+                const speed = PROJECTILE_TYPES[projectileType].speed;
+
+                enemy.game.Projectiles.push(
+                    new Projectile(
+                        enemy.game,
+                        enemy.x + enemy.width / 2,
+                        enemy.y + enemy.height / 2,
+                        speed * direction,
+                        projectileType === "poisonGlob" ? -4 : 0,
+                        enemy.config.damage,
+                        projectileType
+                    )
+                );
+
+                enemy.attackCooldown = 120;
+            }
         }
     }
 };
+
+
+
+ class Projectile {
+
+        constructor(game, x, y, velocityX, velocityY, damage, typeKey) {
+            this.game = game;
+            this.x = x;
+            this.y = y;
+            this.velocityX = velocityX;
+            this.velocityY = velocityY;
+            this.damage = damage;
+            this.typeKey = typeKey;
+
+            this.config = PROJECTILE_TYPES[typeKey];
+
+            this.width = this.config.width;
+            this.height = this.config.height;
+
+            this.alive = true;
+            this.lifespan = 180;
+        }
+
+        update() {
+
+            if (!this.alive) return;
+
+            this.velocityY += this.config.gravity;
+
+            this.x += this.velocityX;
+            this.y += this.velocityY;
+
+            this.checkWallCollision();
+
+            this.lifespan--;
+            if (this.lifespan <= 0) {
+                this.alive = false;
+            }
+
+            if (this.x < 0 || this.x > this.game.worldWidth) {
+                this.alive = false;
+            }
+        }
+
+        draw(context) {
+
+            if (!this.alive) return;
+
+            context.fillStyle = this.config.color;
+
+            if (this.config.shape === "circle") {
+                context.beginPath();
+                context.arc(
+                    this.x + this.width / 2,
+                    this.y + this.height / 2,
+                    this.width / 2,
+                    0, Math.PI * 2
+                );
+                context.fill();
+            } else {
+                context.fillRect(this.x, this.y, this.width, this.height);
+            }
+        }
+
+        checkCollision(player) {
+
+            if (!this.alive) return;
+
+            const playerLeft = player.x + player.hitboxOffsetX;
+            const playerRight = playerLeft + player.hitboxWidth;
+            const playerTop = player.y + player.hitboxOffsetY;
+            const playerBottom = playerTop + player.hitboxHeight;
+
+            const overlap =
+                playerRight > this.x &&
+                playerLeft < this.x + this.width &&
+                playerBottom > this.y &&
+                playerTop < this.y + this.height;
+
+            if (overlap) {
+                player.takeDamage(this.damage, `projectile-${this.typeKey}`);
+                this.alive = false;
+            }
+        }
+
+
+        checkWallCollision() {
+
+            this.game.Platforms.forEach(platform => {
+
+                const overlap =
+                    this.x + this.width > platform.x &&
+                    this.x < platform.x + platform.width &&
+                    this.y + this.height > platform.y &&
+                    this.y < platform.y + platform.height;
+
+                if (overlap) {
+                    this.alive = false;
+                     console.log(`${this.typeKey} destroyed by wall at`, this.x.toFixed(0), this.y.toFixed(0));
+                }
+            });
+        }
+
+
+
+    }
+
 
 
 
@@ -80,8 +308,8 @@ window.addEventListener('load', function(){
 
             // Player Health
 
-            this.maxHearts = 3;
-            this.currentHearts = 3;
+            this.maxHearts = 30;
+            this.currentHearts = 30;
 
             this.invincible = false;
             this.invincibleTimer = 0;
@@ -815,6 +1043,20 @@ window.addEventListener('load', function(){
             this.patrolRange = 100;
 
             this.attackCooldown = 0;
+
+            this.attackWindup = 0;         
+            this.windupDuration = 30;    
+
+
+
+            // animation
+            this.frameX = 0;
+            this.frametimer = 0;
+            this.frameinterval = 8;
+
+
+
+
         }
 
 
@@ -902,6 +1144,17 @@ window.addEventListener('load', function(){
             this.y += this.velocityY;
 
             this.checkPlatformCollision();
+
+
+            this.frametimer++;
+
+            if (this.frametimer >= this.frameinterval) {
+                this.frametimer = 0;
+                this.frameX++;
+                if (this.frameX >= this.config.frameCount) {
+                    this.frameX = 0;
+                }
+            }
         }
 
 
@@ -909,10 +1162,57 @@ window.addEventListener('load', function(){
 
             if (!this.alive) return;
 
-            context.fillStyle = this.config.color;
-            context.fillRect(this.x, this.y, this.width, this.height);
+            if (!this.config.spriteImage || !this.config.spriteImage.complete) {
+                context.fillStyle = this.config.color;
+                context.fillRect(this.x, this.y, this.width, this.height);
+                return;
+            }
+
+            const sw = this.config.spriteWidth;
+            const sh = this.config.spriteHeight;
+            const dw = this.config.drawWidth ?? this.width;
+            const dh = this.config.drawHeight ?? this.height;
+            const offsetX = this.config.drawOffsetX ?? 0;
+            const offsetY = this.config.drawOffsetY ?? 0;
+
+            let bobOffset = 0;
+            if (Math.abs(this.velocityX) > 0.1) {
+                bobOffset = Math.sin(this.frametimer * 0.5) * 3;
+            }
+
+            context.save();
+
+            if (this.attackWindup > 0 && Math.floor(this.attackWindup / 5) % 2 === 0) {
+                context.globalAlpha = 0.5;
+            }
+
+            const drawX = this.x + offsetX;
+            const drawY = this.y + offsetY + bobOffset;
+
+            if (this.velocityX < 0) {
+                context.scale(-1, 1);
+                context.drawImage(
+                    this.config.spriteImage,
+                    this.frameX * sw, 0, sw, sh,
+                    -(drawX + dw), drawY, dw, dh
+                );
+            } else {
+                context.drawImage(
+                    this.config.spriteImage,
+                    this.frameX * sw, 0, sw, sh,
+                    drawX, drawY, dw, dh
+                );
+            }
+
+            context.restore();
         }
+
+
+       
+
     }
+
+
         
 
 
@@ -1029,6 +1329,10 @@ window.addEventListener('load', function(){
 
             this.Enemies = [];
             this.loadEnemiesFromLevel();
+
+            // projectiles
+
+            this.Projectiles = [];
 
 
 
@@ -1215,13 +1519,15 @@ window.addEventListener('load', function(){
             const soldierLayer = this.leveldata.layers.find(l => l.name === "soldiers");
             if (!soldierLayer) return;
 
-            soldierLayer.objects.forEach(obj => {
+            const types = ["soldier_fire", "soldier_water", "soldier_poison"];
+
+            soldierLayer.objects.forEach((obj, index) => {
+                const typeKey = types[index % types.length]; // cycles through types for quick testing
                 this.Enemies.push(
-                    new Enemy(this, obj.x, obj.y, obj.width, obj.height, "soldier_fire")
+                    new Enemy(this, obj.x, obj.y, obj.width, obj.height, typeKey)
                 );
             });
         }
-
 
 
         render(context) {
@@ -1251,6 +1557,13 @@ window.addEventListener('load', function(){
 
             this.Enemies.forEach(enemy => enemy.update());
             this.Enemies.forEach(enemy => enemy.draw(context));
+
+
+            this.Projectiles.forEach(p => p.update());                          
+            this.Projectiles.forEach(p => p.checkCollision(this.Player));       
+            this.Projectiles.forEach(p => p.draw(context));                    
+
+            this.Projectiles = this.Projectiles.filter(p => p.alive);     
 
             this.Player.draw(context);
           //  this.Obstacles.forEach(obstacle => obstacle.draw(context));
