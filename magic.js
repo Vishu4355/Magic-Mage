@@ -46,7 +46,7 @@ const ENEMY_TYPES = {
         spriteHeight: 32,
         
          drawWidth: 64,     // <-- how big it appears on screen
-         drawHeight: 74,     // <-- keeps the 112:128 aspect ratio roughly (64 * 128/112 ≈ 73)
+         drawHeight: 75,     // <-- keeps the 112:128 aspect ratio roughly (64 * 128/112 ≈ 73)
          drawOffsetX: -16,   // <-- centers the wider sprite over the collision box
          drawOffsetY: -20    // <-- lifts sprite up so feet land at the right spot
 
@@ -67,7 +67,7 @@ const ENEMY_TYPES = {
         spriteHeight: 84,
         
          drawWidth: 64,     // <-- how big it appears on screen
-         drawHeight: 74,     // <-- keeps the 112:128 aspect ratio roughly (64 * 128/112 ≈ 73)
+         drawHeight: 68,     // <-- keeps the 112:128 aspect ratio roughly (64 * 128/112 ≈ 73)
          drawOffsetX: -16,   // <-- centers the wider sprite over the collision box
          drawOffsetY: -20    // <-- lifts sprite up so feet land at the right spot
     }
@@ -94,7 +94,17 @@ const PROJECTILE_TYPES = {
         height: 16,
         color: "orange",
         shape: "circle",
-        gravity: 0     // flies straight
+        gravity: 0,     // flies straight,
+
+        spriteSrc : 'assets/fire-ball.png',
+        frameCount : 3,
+        spriteWidth: 52,
+        spriteHeight: 29,
+
+        drawWidth : 52,
+        drawHeight: 29
+
+        
     },
 
     waterRay: {
@@ -115,6 +125,20 @@ const PROJECTILE_TYPES = {
         gravity: 0.05   // arcs downward like a lobbed blob
     }
 };
+
+
+
+Object.keys(PROJECTILE_TYPES).forEach(typeKey => {
+    const config = PROJECTILE_TYPES[typeKey];
+    if (!config.spriteSrc) return;
+
+    const img = new Image();
+    img.src = config.spriteSrc;
+    config.spriteImage = img;
+});
+
+
+
 
 
 const ATTACK_PATTERNS = {
@@ -165,11 +189,17 @@ const ATTACK_PATTERNS = {
                 const projectileType = enemy.config.projectileType; // <-- reads from enemy's own config
                 const speed = PROJECTILE_TYPES[projectileType].speed;
 
+                const spawnX = direction === 1
+                    ? enemy.x + enemy.width
+                    : enemy.x;
+
+                const spawnY = enemy.y + enemy.height / 2 - 25;
+
                 enemy.game.Projectiles.push(
                     new Projectile(
                         enemy.game,
-                        enemy.x + enemy.width / 2,
-                        enemy.y + enemy.height / 2,
+                        spawnX,
+                        spawnY,
                         speed * direction,
                         projectileType === "poisonGlob" ? -4 : 0,
                         enemy.config.damage,
@@ -203,6 +233,14 @@ const ATTACK_PATTERNS = {
 
             this.alive = true;
             this.lifespan = 180;
+
+
+
+            // Animation
+
+            this.frameX = 0;
+            this.frametimer = 0;
+            this.frameinterval = 5;
         }
 
         update() {
@@ -216,6 +254,17 @@ const ATTACK_PATTERNS = {
 
             this.checkWallCollision();
 
+            
+            this.frametimer++;
+
+            if (this.frametimer >= this.frameinterval) {
+                this.frametimer = 0;
+                this.frameX++;
+                if (this.frameX >= this.config.frameCount) {
+                    this.frameX = 0;
+                }
+            }
+
             this.lifespan--;
             if (this.lifespan <= 0) {
                 this.alive = false;
@@ -228,20 +277,47 @@ const ATTACK_PATTERNS = {
 
         draw(context) {
 
+
+
+            const sw = this.config.spriteWidth;
+            const sh = this.config.spriteHeight;
+
+            const dw = this.config.drawWidth ?? this.width;
+            const dh = this.config.drawHeight ?? this.height;
+
+
             if (!this.alive) return;
 
-            context.fillStyle = this.config.color;
+            if ( this.config.spriteImage && this.config.spriteImage.complete)  {
 
-            if (this.config.shape === "circle") {
-                context.beginPath();
-                context.arc(
-                    this.x + this.width / 2,
-                    this.y + this.height / 2,
-                    this.width / 2,
-                    0, Math.PI * 2
-                );
-                context.fill();
-            } else {
+                context.save();
+
+
+                if (this.velocityX < 0) {
+
+                        context.scale(-1, 1);
+
+                        context.drawImage(
+                            this.config.spriteImage,
+                            this.frameX * sw,
+                            0,
+                            sw,
+                            sh,
+                            -(this.x + dw),
+                            this.y,
+                            dw,
+                            dh
+                        );}
+                
+                else {
+                        context.drawImage(
+                        this.config.spriteImage,
+                        this.frameX * sw, 0, sw, sh,
+                        this.x, this.y, dw, dh);}
+
+                context.restore();}          
+
+            else {
                 context.fillRect(this.x, this.y, this.width, this.height);
             }
         }
