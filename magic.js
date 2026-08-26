@@ -12,7 +12,7 @@ async function loadLevel(path) {
 const ENEMY_TYPES = {
 
     soldier_fire: {
-        health: 3,
+        health: 1,
         patrolSpeed: 1,
         damage: 1,
         attackPatterns: ["meleeSwing", "rangedAttack"],
@@ -33,7 +33,7 @@ const ENEMY_TYPES = {
     },
 
     soldier_water: {
-        health: 3,
+        health: 1,
         patrolSpeed: 1,
         damage: 1,
         attackPatterns: ["meleeSwing", "rangedAttack"],
@@ -54,7 +54,7 @@ const ENEMY_TYPES = {
     },
 
     soldier_poison: {
-        health: 4,
+        health: 1,
         patrolSpeed: 0.8,
         damage: 1,
         attackPatterns: ["rangedAttack"], // no melee — pure ranged type
@@ -95,6 +95,7 @@ const PROJECTILE_TYPES = {
         color: "orange",
         shape: "circle",
         gravity: 0,     // flies straight,
+        drawY : -25,
 
         spriteSrc : 'assets/fire-ball.png',
         frameCount : 3,
@@ -122,7 +123,19 @@ const PROJECTILE_TYPES = {
         height: 14,
         color: "limegreen",
         shape: "circle",
-        gravity: 0.05   // arcs downward like a lobbed blob
+        gravity: 0.05,  // arcs downward like a lobbed blob
+
+        drawY : 0,
+
+        spriteSrc : 'assets/poison.png',
+        frameCount : 2,
+        spriteWidth: 16,
+        spriteHeight: 16,
+
+        drawWidth : 52,
+        drawHeight: 29
+
+
     }
 };
 
@@ -185,22 +198,30 @@ const ATTACK_PATTERNS = {
 
             if (enemy.attackWindup === 0) {
 
-                const direction = player.x > enemy.x ? 1 : -1;
-                const projectileType = enemy.config.projectileType; // <-- reads from enemy's own config
+                enemy.facing = player.x > enemy.x ? 1 : -1;
+
+                const projectileType = enemy.config.projectileType;
                 const speed = PROJECTILE_TYPES[projectileType].speed;
+                const dY = PROJECTILE_TYPES[projectileType].drawY ?? 0;
 
-                const spawnX = direction === 1
-                    ? enemy.x + enemy.width
-                    : enemy.x;
+                const drawWidth = enemy.config.drawWidth ?? enemy.width;
+                const drawHeight = enemy.config.drawHeight ?? enemy.height;
+                const offsetX = enemy.config.drawOffsetX ?? 0;
+                const offsetY = enemy.config.drawOffsetY ?? 0;
 
-                const spawnY = enemy.y + enemy.height / 2 - 25;
+                const visualLeft = enemy.x + offsetX;
+                const visualRight = visualLeft + drawWidth;
+                const visualCenterY = enemy.y + offsetY + drawHeight / 2;
+
+                const spawnX = enemy.facing === 1 ? visualRight : visualLeft;
+                const spawnY = visualCenterY + dY;
 
                 enemy.game.Projectiles.push(
                     new Projectile(
                         enemy.game,
                         spawnX,
                         spawnY,
-                        speed * direction,
+                        speed * enemy.facing,
                         projectileType === "poisonGlob" ? -4 : 0,
                         enemy.config.damage,
                         projectileType
@@ -211,6 +232,9 @@ const ATTACK_PATTERNS = {
             }
         }
     }
+
+
+   
 };
 
 
@@ -285,6 +309,11 @@ const ATTACK_PATTERNS = {
             const dw = this.config.drawWidth ?? this.width;
             const dh = this.config.drawHeight ?? this.height;
 
+            const drawX = this.x + this.width / 2 - dw / 2;
+            const drawY = this.y + this.height / 2 - dh / 2;
+
+           // const dy = this.config.drawY ?? 0;
+
 
             if (!this.alive) return;
 
@@ -303,8 +332,8 @@ const ATTACK_PATTERNS = {
                             0,
                             sw,
                             sh,
-                            -(this.x + dw),
-                            this.y,
+                            -(drawX + dw),
+                            drawY,
                             dw,
                             dh
                         );}
@@ -313,13 +342,23 @@ const ATTACK_PATTERNS = {
                         context.drawImage(
                         this.config.spriteImage,
                         this.frameX * sw, 0, sw, sh,
-                        this.x, this.y, dw, dh);}
+                        drawX, drawY, dw, dh);}
 
                 context.restore();}          
 
             else {
+                context.fillStyle = this.config.color;
+
                 context.fillRect(this.x, this.y, this.width, this.height);
             }
+
+            context.strokeStyle = "red";
+            context.strokeRect(
+                this.x,
+                this.y,
+                this.width,
+                this.height
+            );
         }
 
         checkCollision(player) {
@@ -1014,12 +1053,46 @@ window.addEventListener('load', function(){
             this.height = height;
             this.width = width;
             this.type = type;
+
+            this.spikeimg = new Image();
+            this.spikeimg.src = "assets/small_metal_spike.png";
         }
 
 
         draw(context) {
-        context.fillStyle = this.type === "lava" ? "orangered" : "gray";
-        context.fillRect(this.x, this.y, this.width, this.height);
+
+            if (this.type === "spikes") {
+
+                if (!this.spikeimg.complete) return;
+
+                const spikeWidth = 36;
+                const spikeHeight = 36;
+
+                for (
+                    let x = this.x;
+                    x < this.x + this.width;
+                    x += spikeWidth
+                ) {
+                    context.drawImage(
+                        this.spikeimg,
+                        x,
+                        this.y,
+                        Math.min(spikeWidth, this.x + this.width - x),
+                        spikeHeight
+                    );
+                }
+
+            } else {
+
+                // Lava
+                context.fillStyle = "orangered";
+                context.fillRect(
+                    this.x,
+                    this.y,
+                    this.width,
+                    this.height
+                );
+            }
         }
 
 
@@ -1057,13 +1130,19 @@ window.addEventListener('load', function(){
             this.width = width;
             this.height = height;
             this.collected = false;
+
+            // sprite
+            this.ruby = new Image();
+            this.ruby.src = "assets/gem-ruby-cut.webp"
+
         }
 
         draw(context) {
             if (this.collected) return;
 
-            context.fillStyle = "gold";
-            context.fillRect(this.x, this.y, this.width, this.height);
+            if(this.ruby.complete){
+                context.drawImage(this.ruby,this.x,this.y,this.width,this.height);
+            }
         }
 
         checkCollision(player) {
@@ -1122,6 +1201,8 @@ window.addEventListener('load', function(){
 
             this.attackWindup = 0;         
             this.windupDuration = 30;    
+
+            this.facing = 1;
 
 
 
@@ -1211,6 +1292,12 @@ window.addEventListener('load', function(){
                 this.updatePatrol();
             }
 
+             if (this.velocityX > 0.1) {
+                    this.facing = 1;
+                } else if (this.velocityX < -0.1) {
+                    this.facing = -1;
+                }
+
             this.config.attackPatterns.forEach(patternName => {
                 ATTACK_PATTERNS[patternName](this, this.game.Player);
             });
@@ -1265,7 +1352,7 @@ window.addEventListener('load', function(){
             const drawX = this.x + offsetX;
             const drawY = this.y + offsetY + bobOffset;
 
-            if (this.velocityX < 0) {
+            if (this.facing === -1) {
                 context.scale(-1, 1);
                 context.drawImage(
                     this.config.spriteImage,
@@ -1281,6 +1368,20 @@ window.addEventListener('load', function(){
             }
 
             context.restore();
+        }
+
+
+
+        takeDamage(amount = 1) {
+
+            if (!this.alive) return;
+
+            this.health -= amount;
+
+            if (this.health <= 0) {
+                this.health = 0;
+                this.alive = false;
+            }
         }
 
 
@@ -1397,6 +1498,7 @@ window.addEventListener('load', function(){
             this.loadHazardsFromLevel();
 
             // collectibles
+
 
             this.Collectibles = [];
             this.loadCollectiblesFromLevel();
