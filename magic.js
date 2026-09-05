@@ -19,6 +19,8 @@ const ENEMY_TYPES = {
         projectileType: "fireball",
         color: "orangered",
 
+        element : "fire",
+
         spriteSrc: 'assets/Fire-haunt.png',
         frameCount: 5,
         spriteWidth: 112,   
@@ -40,6 +42,8 @@ const ENEMY_TYPES = {
         projectileType: "waterRay",
         color: "dodgerblue",
 
+        element : "water",
+
         spriteSrc: 'assets/meerman.png',
         frameCount: 2,
         spriteWidth: 27,   
@@ -60,6 +64,8 @@ const ENEMY_TYPES = {
         attackPatterns: ["rangedAttack"], // no melee — pure ranged type
         projectileType: "poisonGlob",
         color: "limegreen",
+
+        element : "earth",
 
         spriteSrc: 'assets/Treant.png',
         frameCount: 4,
@@ -136,7 +142,93 @@ const PROJECTILE_TYPES = {
         drawHeight: 29
 
 
+    },
+
+    firebolt : {
+
+        speed: 6,
+        width: 16,
+        height: 16,
+        color: "orange",
+        shape: "circle",
+        gravity: 0,     // flies straight,
+        drawY : -25,
+
+        spriteSrc : 'assets/fire-ball.png',
+        frameCount : 3,
+        spriteWidth: 52,
+        spriteHeight: 29,
+
+        drawWidth : 52,
+        drawHeight: 29,
+
+
+    },
+
+    waterbolt : {
+
+        speed: 6,
+        width: 16,
+        height: 16,
+        color: "blue",
+        shape: "rect",
+        gravity: 0,     // flies straight,
+        drawY : -25,
+
+        spriteSrc : '',
+        frameCount : 3,
+        spriteWidth: 52,
+        spriteHeight: 29,
+
+        drawWidth : 52,
+        drawHeight: 29
+
+
+
+    },
+
+
+    earthbolt : {
+
+        speed: 4,
+        width: 16,
+        height: 16,
+        color: "orange",
+        shape: "circle",
+        gravity: 0,     // flies straight,
+        drawY : -25,
+
+        spriteSrc : 'assets/fire-ball.png',
+        frameCount : 3,
+        spriteWidth: 52,
+        spriteHeight: 29,
+
+        drawWidth : 52,
+        drawHeight: 29
+    },
+
+
+     skybolt : {
+
+        speed: 7,
+        width: 16,
+        height: 16,
+        color: "orange",
+        shape: "circle",
+        gravity: 0,     // flies straight,
+        drawY : -25,
+
+        spriteSrc : 'assets/fire-ball.png',
+        frameCount : 3,
+        spriteWidth: 52,
+        spriteHeight: 29,
+
+        drawWidth : 52,
+        drawHeight: 29
     }
+
+
+
 };
 
 
@@ -150,6 +242,66 @@ Object.keys(PROJECTILE_TYPES).forEach(typeKey => {
     config.spriteImage = img;
 });
 
+
+
+const EFFECT_TYPES = {
+
+    inferno : {
+        duration : 120,
+        height : 180,
+        width : 180,
+        damage : 2,
+        color : "orangered",
+
+        spriteSrc : "assets/Fire-bomb.png",
+        frameCount : 14,
+        spriteWidth : 64,
+        spriteHeight : 64,
+
+        drawWidth : 180,
+        drawHeight : 180
+    },
+
+    tidal : {
+        duration : 120,
+        height : 80,
+        width : 80,
+        damage : 2,
+        color : "dodgerblue"
+    },
+
+    tempest : {
+        duration : 120,
+        height : 80,
+        width : 80,
+        damage : 2,
+        color : "deepskyblue"
+    },
+
+    earthquake : {
+        duration : 120,
+        height : 80,
+        width : 80,
+        damage : 2,
+        color : "saddlebrown"
+    }
+
+
+
+
+    
+
+
+}
+
+Object.keys(EFFECT_TYPES).forEach(typeKey => {
+    const config = EFFECT_TYPES[typeKey];
+    if (!config.spriteSrc) return;
+
+    const img = new Image();
+    img.src = config.spriteSrc;
+    config.spriteImage = img;
+});
 
 
 
@@ -236,6 +388,400 @@ const ATTACK_PATTERNS = {
 
    
 };
+
+
+
+
+
+const ELEMENTS = {
+    fire: {
+        strong: "sky",
+        weak: "water",
+        color: "orangered"
+    },
+
+    water: {
+        strong: "fire",
+        weak: "earth",
+        color: "dodgerblue"
+    },
+
+    earth: {
+        strong: "water",
+        weak: "sky",
+        color: "saddlebrown"
+    },
+
+    sky: {
+        strong: "earth",
+        weak: "fire",
+        color: "deepskyblue"
+    }
+};
+
+
+function getHitsNeeded(attackElement, enemyElement) {
+
+    if (attackElement === enemyElement) return 1;
+    if (ELEMENTS[enemyElement].weak === attackElement) return 1;
+    return 2;
+};
+
+
+
+function executePlayerAttack(player , attackKey) {
+
+
+    const attack = ATTACKS[attackKey];
+
+    console.log("PLAYER ATTACK:", attackKey);
+
+
+    if(!attack) return;
+
+    if (attack.type === "projectile" ){
+
+        firePlayerProjectile(player, attack, attackKey);
+
+    }else if ((attack.type === "area" || attack.type === "wave" || attack.type === "ground") ){
+
+        applyPlayerAreaAttack(player, attack , attackKey);
+    }
+
+
+}
+
+
+
+
+function firePlayerProjectile(player, attack, attackKey) {
+
+    const spawnX = player.facing === 1 ? player.x + player.width : player.x;
+    const spawnY = player.y + player.height / 2;
+
+    const projectileType = attack.elements[0] + "bolt";
+    
+
+    player.game.PlayerProjectiles.push(
+        new Projectile(
+            player.game,
+            spawnX,
+            spawnY,
+            6*player.facing,
+            0,
+            attack.damage,
+            projectileType
+
+        )
+    )
+}
+
+
+
+
+function applyPlayerAreaAttack(player, attack, attackKey) {
+
+    const range = 80; // tune later
+
+    const attackLeft = player.x - range;
+    const attackRight = player.x + player.width + range;
+    const attackTop = player.y - range / 2;
+    const attackBottom = player.y + player.height + range / 2;
+
+
+
+    player.game.Effects.push(
+
+    new areaEffect(
+        player.game,
+        player.x - 8,   // roughly centered on player
+        player.y - 8,
+        undefined,        // let it use EFFECT_TYPES width
+        undefined,
+        attack.damage,
+        attackKey
+    ));
+
+
+
+
+
+    player.game.Enemies.forEach(enemy => {
+
+        if (!enemy.alive) return;
+
+        const overlap =
+            enemy.x + enemy.width > attackLeft &&
+            enemy.x < attackRight &&
+            enemy.y + enemy.height > attackTop &&
+            enemy.y < attackBottom;
+
+        if (overlap) {
+            applyElementalDamage(enemy, attack);
+        }
+    });
+}
+
+
+
+
+
+function applyElementalDamage(enemy, attack) {
+
+    const attackElement = attack.elements[0]; // for combos, decide later how multi-element interacts
+
+    if (enemy.config.isBoss) {
+        enemy.takeDamage(attack.damage);
+        return;
+    }
+
+    const hitsNeeded = getHitsNeeded(attackElement, enemy.config.element);
+
+    if (enemy.hitsTaken === undefined) enemy.hitsTaken = 0;
+    enemy.hitsTaken++;
+
+    if (enemy.hitsTaken >= hitsNeeded) {
+        enemy.alive = false;
+    }
+}
+
+
+
+
+const ATTACKS = {
+
+
+    // player projectile
+
+
+
+
+    // basic attack
+
+    fireball: {
+        elements: ["fire"],
+        type: "projectile",
+        damage: 2,
+        effects: ["burn"]
+    },
+
+
+     
+    waterball: {
+        elements: ["water"],
+        type: "projectile",
+        damage: 2,
+        effects: ["push"]
+    },
+
+
+     
+    rockball: {
+        elements: ["earth"],
+        type: "projectile",
+        damage: 2,
+        effects: ["heavypain"]
+    },
+
+
+     
+    windball: {
+        elements: ["sky"],
+        type: "projectile",
+        damage: 2,
+        effects: ["knockback"]
+    },
+
+
+    // double attacks
+
+
+    
+    inferno: {
+        elements: ["fire", "fire"],
+        type: "area",
+        damage: 3,
+        effects: ["heavypain" ,"burn"]
+    },
+
+    
+    tidal: {
+        elements: ["water", "water"],
+        type: "wave",
+        damage: 3,
+        effects: ["bigpush"]
+    },
+
+    
+    earthquake: {
+        elements: ["earth", "earth"],
+        type: "ground",
+        damage: 3,
+        effects: ["freeze"]
+    },
+
+
+    tempest: {
+        elements: ["sky", "sky"],
+        type: "area",
+        damage: 5,
+        effects: ["Multiple hits"]
+    },
+
+
+    // combination attack
+
+
+
+    ice: {
+        elements: ["water", "sky"],
+        type: "projectile",
+        damage: 3,
+        effects: ["freeze"]
+    },
+
+
+
+    firestorm: {
+        elements: ["fire", "sky"],
+        type: "area",
+        damage: 5,
+        effects: ["burn", "knockback"]
+    },
+
+
+    
+   
+
+     
+    steam: {
+        elements: ["fire", "water"],
+        type: "area",
+        damage: 5,
+        effects: ["explosion","knockback"]
+    },
+
+     
+    magma: {
+        elements: ["fire", "earth"],
+        type: "area",
+        damage: 5,
+        effects: ["explosion","burn"]
+    },
+
+     
+    nature: {
+        elements: ["earth", "water"],
+        type: "area",
+        damage: 5,
+        effects: ["root"]
+    },
+
+
+     
+    sandstorm: {
+        elements: ["earth", "sky"],
+        type: "area",
+        damage: 5,
+        effects: ["slow","pain"]
+    },
+
+    // space magic
+
+
+    wrap: {
+        elements: ["space"],
+        type: "tele",
+        damage: 2,
+        effects: ["teleport"]
+    },
+
+    blackhole: {
+        elements: ["space"],
+        type: "gravity",
+        damage: 2,
+        effects: ["pull enemies"]
+    },
+
+    gravitycrush: {
+        elements: ["sopace"],
+        type: "meteor",
+        damage: 2,
+        effects: ["crush"]
+    },
+
+
+    CosmicCollapse: {
+        elements: ["space"],
+        type: "ultimate",
+        damage: 2,
+        effects: ["spacetear"]
+    },
+
+    
+};
+
+
+function getsingleAttack(element) {
+
+    if(!element) return null;
+
+    const attackkey = Object.keys(ATTACKS).find(key => {
+
+        const attack = ATTACKS[key];
+
+        if(!attack.elements || attack.elements.length !== 1) {
+
+            return false;
+        }
+
+        return (attack.elements[0] === element);
+
+    });
+
+
+    return attackkey || null
+
+};
+
+
+    
+
+
+
+
+
+
+
+
+
+function getAttackfromSlots(slotA, slotB) {
+
+    if(!slotA || !slotB) return null;
+
+    const attackKey = Object.keys(ATTACKS).find(key => {
+
+        const attack = ATTACKS[key];
+
+        if(!attack.elements || attack.elements.length !== 2) {
+            return false;
+        }
+
+        const [element1, element2] = attack.elements;
+
+        return (
+            (element1 === slotA && element2 === slotB) ||
+            (element1 === slotB && element2 === slotA)
+        )
+    });
+
+    return attackKey || null;
+
+}
+
+
+
+
 
 
 
@@ -406,6 +952,90 @@ const ATTACK_PATTERNS = {
 
 
 
+class areaEffect {
+
+    constructor(game, x, y, width, height, damage, typeKey) {
+
+        this.game = game;
+        this.x = x;
+        this.y = y;
+
+        this.config = EFFECT_TYPES[typeKey];
+
+        this.width = width ?? this.config.width;
+        this.height = height ?? this.config.height;
+        this.damage = damage ?? this.config.damage;
+
+        this.typeKey = typeKey;
+        this.alive = true;
+        this.duration = this.config.duration;
+
+        
+        // Animation
+
+        this.frameX = 0;
+        this.frametimer = 0;
+        this.frameinterval = 8;
+
+
+    }
+
+
+
+    update() {
+
+        if (!this.alive) return;
+
+
+        this.frametimer++;
+
+            if (this.frametimer >= this.frameinterval) {
+                this.frametimer = 0;
+                this.frameX++;
+                if (this.frameX >= this.config.frameCount) {
+                    this.frameX = 0;
+                }
+            }
+
+        this.duration--;
+        if (this.duration <= 0) {
+            this.alive = false;
+      }
+
+
+
+
+    }
+
+    draw(context) {
+
+        const sw = this.config.spriteWidth;
+        const sh = this.config.spriteHeight;
+
+        const dw = this.config.drawWidth ?? this.width;
+        const dh = this.config.drawHeight ?? this.height;
+
+        if (!this.alive) return;
+
+        if (this.config.spriteImage && this.config.spriteImage.complete) {
+            context.save();
+
+            const drawX = this.x;
+            const drawY = this.y;
+
+            context.drawImage(
+                this.config.spriteImage,
+                this.frameX * sw, 0, sw, sh,
+                drawX, drawY, dw, dh
+            );
+
+            context.restore();
+        } else {
+            context.fillStyle = this.config.color;
+            context.fillRect(this.x, this.y, this.width, this.height);
+        }
+    }
+}
 
 
 window.addEventListener('load', function(){
@@ -454,6 +1084,13 @@ window.addEventListener('load', function(){
             this.groundFriction = 0.35;
             this.airFriction = 0.04;
             this.gravity = 0.5;
+
+
+
+            // Elemental magic
+            this.slotA = "fire";   // will start null until unlocked — hardcode for testing now
+            this.slotB = "fire";
+            this.attackCooldown = 0;
 
 
             this.jumpForce = -16;
@@ -576,7 +1213,7 @@ window.addEventListener('load', function(){
         }
 
 
-        takeDamage(amount =1 , source = 'unkown'){
+        takeDamage(amount =1 , source = 'unknown'){
 
             if(this.invincible) return;
 
@@ -690,6 +1327,29 @@ window.addEventListener('load', function(){
 
 
             this.onGround = false;
+
+
+            if (this.attackCooldown > 0) {
+                this.attackCooldown--;
+            }
+
+            if (this.game.keys.e && this.attackCooldown === 0 && this.slotA) {
+                const attackKey = getsingleAttack(this.slotA);
+                executePlayerAttack(this, attackKey);
+                this.attackCooldown = 30;
+            }
+
+            if (this.game.keys.f && this.attackCooldown === 0 && this.slotB) {
+                const attackKey = getsingleAttack(this.slotB);
+                executePlayerAttack(this, attackKey);
+                this.attackCooldown = 30;
+            }
+
+            if (this.game.keys.g && this.attackCooldown === 0 && this.slotA && this.slotB) {
+                const attackKey = getAttackfromSlots(this.slotA, this.slotB);
+                executePlayerAttack(this, attackKey);
+                this.attackCooldown = 30;
+            }
 
 
            if (this.invincible) {
@@ -1512,6 +2172,10 @@ window.addEventListener('load', function(){
 
             this.Projectiles = [];
 
+            this.PlayerProjectiles = [];
+
+            this.Effects = [];
+
 
 
 
@@ -1550,7 +2214,10 @@ window.addEventListener('load', function(){
                 w : false,
                 a : false,
                 s : false,
-                d : false
+                d : false,
+                e : false,
+                f : false,
+                g : false
 
 
             };
@@ -1640,6 +2307,42 @@ window.addEventListener('load', function(){
 
             context.fillStyle = "red";
             context.fillText(`Score: ${this.score}`, 20, 150);     // then fill on top
+        }
+
+
+
+        updatePlayerProjectiles() {
+
+            this.PlayerProjectiles.forEach(p => {
+                p.update();
+
+               
+
+                // Check collision with enemies
+                this.Enemies.forEach(enemy => {
+                    if (!enemy.alive || !p.alive) return;
+
+                    const overlap =
+                        p.x + p.width > enemy.x &&
+                        p.x < enemy.x + enemy.width &&
+                        p.y + p.height > enemy.y &&
+                        p.y < enemy.y + enemy.height;
+
+                    if (overlap) {
+
+                       applyElementalDamage(enemy, { elements: [p.typeKey.replace("bolt","")], damage: p.damage });
+                        // Projectile disappears after hitting an enemy
+                        p.alive = false;
+                    }
+                });
+
+                
+            });
+
+            // Remove dead projectiles
+            this.PlayerProjectiles = this.PlayerProjectiles.filter(
+                p => p.alive
+            );
         }
        
         
@@ -1739,10 +2442,17 @@ window.addEventListener('load', function(){
 
             this.Projectiles.forEach(p => p.update());                          
             this.Projectiles.forEach(p => p.checkCollision(this.Player));       
-            this.Projectiles.forEach(p => p.draw(context));                    
+            this.Projectiles.forEach(p => p.draw(context));
 
-            this.Projectiles = this.Projectiles.filter(p => p.alive);     
+            this.Projectiles = this.Projectiles.filter(p => p.alive);  
+            
+            this.updatePlayerProjectiles();
+            this.PlayerProjectiles.forEach(p => p.draw(context));
 
+            this.Effects.forEach(fx => fx.update());
+            this.Effects.forEach(fx => fx.draw(context));
+            this.Effects = this.Effects.filter(fx => fx.alive);
+           
             this.Player.draw(context);
           //  this.Obstacles.forEach(obstacle => obstacle.draw(context));
 
