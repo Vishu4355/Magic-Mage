@@ -481,7 +481,16 @@ function firePlayerProjectile(player, attack, attackKey) {
 
 function applyPlayerAreaAttack(player, attack, attackKey) {
 
-    const range = 80; // tune later
+    const range = 180; // tune later
+
+
+    const effectConfig = EFFECT_TYPES[attackKey];
+    const effectWidth = effectConfig.width;
+    const effectHeight = effectConfig.height;
+
+    const spawnX = player.x + player.width / 2 - effectWidth / 2;
+    const spawnY = player.y + player.height / 2 - effectHeight / 2;
+
 
     const attackLeft = player.x - range;
     const attackRight = player.x + player.width + range;
@@ -494,10 +503,10 @@ function applyPlayerAreaAttack(player, attack, attackKey) {
 
     new areaEffect(
         player.game,
-        player.x - 8,   // roughly centered on player
-        player.y - 8,
-        undefined,        // let it use EFFECT_TYPES width
-        undefined,
+        spawnX,
+        spawnY,
+        effectWidth,
+        effectHeight,
         attack.damage,
         attackKey
     ));
@@ -1092,6 +1101,8 @@ window.addEventListener('load', function(){
             this.slotB = "fire";
             this.attackCooldown = 0;
 
+            this.areacooldown = 0;
+
 
             this.jumpForce = -16;
             this.maxJump = 2;
@@ -1333,6 +1344,10 @@ window.addEventListener('load', function(){
                 this.attackCooldown--;
             }
 
+            if (this.areacooldown > 0) {
+                this.areacooldown--;
+            }
+
             if (this.game.keys.e && this.attackCooldown === 0 && this.slotA) {
                 const attackKey = getsingleAttack(this.slotA);
                 executePlayerAttack(this, attackKey);
@@ -1348,7 +1363,7 @@ window.addEventListener('load', function(){
             if (this.game.keys.g && this.attackCooldown === 0 && this.slotA && this.slotB) {
                 const attackKey = getAttackfromSlots(this.slotA, this.slotB);
                 executePlayerAttack(this, attackKey);
-                this.attackCooldown = 30;
+                this.attackCooldown = 500;
             }
 
 
