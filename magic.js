@@ -225,7 +225,29 @@ const PROJECTILE_TYPES = {
 
         drawWidth : 52,
         drawHeight: 29
+    },
+
+
+    icebolt : {
+
+        speed: 7,
+        width: 16,
+        height: 16,
+        color: "orange",
+        projectileType: "icebolt",
+        shape: "circle",
+        gravity: 0,     // flies straight,
+        drawY : -25,
+
+        spriteSrc : 'assets/spritesheet.png',
+        frameCount : 4,
+        spriteWidth: 95,
+        spriteHeight: 32,
+
+        drawWidth : 95,
+        drawHeight: 32
     }
+
 
 
 
@@ -238,6 +260,23 @@ Object.keys(PROJECTILE_TYPES).forEach(typeKey => {
     if (!config.spriteSrc) return;
 
     const img = new Image();
+
+    img.onload = () => {
+        console.log(
+            `${typeKey} loaded:`,
+            img.naturalWidth,
+            "x",
+            img.naturalHeight
+        );
+    };
+
+    img.onerror = () => {
+        console.error(`${typeKey} FAILED TO LOAD:`, config.spriteSrc);
+    };
+
+
+
+
     img.src = config.spriteSrc;
     config.spriteImage = img;
 });
@@ -284,7 +323,62 @@ const EFFECT_TYPES = {
         width : 80,
         damage : 2,
         color : "saddlebrown"
-    }
+    },
+
+
+
+     firestorm : {
+        duration : 120,
+        height : 80,
+        width : 80,
+        damage : 2,
+        color : "saddlebrown"
+    },
+
+
+
+     steam : {
+        duration : 120,
+        height : 80,
+        width : 80,
+        damage : 2,
+        color : "saddlebrown"
+    },
+
+
+     magma: {
+        duration : 120,
+        height : 80,
+        width : 80,
+        damage : 2,
+        color : "saddlebrown"
+    },
+
+
+     nature : {
+        duration : 120,
+        height : 80,
+        width : 80,
+        damage : 2,
+        color : "saddlebrown"
+    },
+
+     sandstorm: {
+        duration : 120,
+        height : 80,
+        width : 80,
+        damage : 2,
+        color : "saddlebrown"
+    },
+
+
+
+
+
+
+
+
+
 
 
 
@@ -459,21 +553,24 @@ function firePlayerProjectile(player, attack, attackKey) {
     const spawnX = player.facing === 1 ? player.x + player.width : player.x;
     const spawnY = player.y + player.height / 2;
 
-    const projectileType = attack.elements[0] + "bolt";
+    const projectileType = attack.projectileType;
+
     
 
-    player.game.PlayerProjectiles.push(
-        new Projectile(
-            player.game,
-            spawnX,
-            spawnY,
-            6*player.facing,
-            0,
-            attack.damage,
-            projectileType
+    const projectile = new Projectile(
+        player.game,
+        spawnX,
+        spawnY,
+        6 * player.facing,
+        0,
+        attack.damage,
+        projectileType
+    );
 
-        )
-    )
+
+    projectile.element = attack.elements[0]; // for now, just use the first element
+
+    player.game.PlayerProjectiles.push(projectile);
 }
 
 
@@ -571,7 +668,8 @@ const ATTACKS = {
         elements: ["fire"],
         type: "projectile",
         damage: 2,
-        effects: ["burn"]
+        effects: ["burn"],
+        projectileType: "firebolt"
     },
 
 
@@ -580,7 +678,8 @@ const ATTACKS = {
         elements: ["water"],
         type: "projectile",
         damage: 2,
-        effects: ["push"]
+        effects: ["push"],
+        projectileType: "waterbolt"
     },
 
 
@@ -589,7 +688,8 @@ const ATTACKS = {
         elements: ["earth"],
         type: "projectile",
         damage: 2,
-        effects: ["heavypain"]
+        effects: ["heavypain"],
+        projectileType: "earthbolt"
     },
 
 
@@ -598,7 +698,8 @@ const ATTACKS = {
         elements: ["sky"],
         type: "projectile",
         damage: 2,
-        effects: ["knockback"]
+        effects: ["knockback"],
+        projectileType: "skybolt"
     },
 
 
@@ -610,7 +711,8 @@ const ATTACKS = {
         elements: ["fire", "fire"],
         type: "area",
         damage: 3,
-        effects: ["heavypain" ,"burn"]
+        effects: ["heavypain" ,"burn"],
+        
     },
 
     
@@ -618,7 +720,8 @@ const ATTACKS = {
         elements: ["water", "water"],
         type: "wave",
         damage: 3,
-        effects: ["bigpush"]
+        effects: ["bigpush"],
+        
     },
 
     
@@ -626,7 +729,8 @@ const ATTACKS = {
         elements: ["earth", "earth"],
         type: "ground",
         damage: 3,
-        effects: ["freeze"]
+        effects: ["freeze"],
+       
     },
 
 
@@ -634,7 +738,8 @@ const ATTACKS = {
         elements: ["sky", "sky"],
         type: "area",
         damage: 5,
-        effects: ["Multiple hits"]
+        effects: ["Multiple hits"],
+        
     },
 
 
@@ -646,7 +751,8 @@ const ATTACKS = {
         elements: ["water", "sky"],
         type: "projectile",
         damage: 3,
-        effects: ["freeze"]
+        effects: ["freeze"],
+        projectileType: "icebolt"
     },
 
 
@@ -1097,8 +1203,8 @@ window.addEventListener('load', function(){
 
 
             // Elemental magic
-            this.slotA = "fire";   // will start null until unlocked — hardcode for testing now
-            this.slotB = "fire";
+            this.slotA = "sky";   // will start null until unlocked — hardcode for testing now
+            this.slotB = "water";
             this.attackCooldown = 0;
 
             this.areacooldown = 0;
@@ -1351,19 +1457,19 @@ window.addEventListener('load', function(){
             if (this.game.keys.e && this.attackCooldown === 0 && this.slotA) {
                 const attackKey = getsingleAttack(this.slotA);
                 executePlayerAttack(this, attackKey);
-                this.attackCooldown = 30;
+                this.attackCooldown = 50;
             }
 
             if (this.game.keys.f && this.attackCooldown === 0 && this.slotB) {
                 const attackKey = getsingleAttack(this.slotB);
                 executePlayerAttack(this, attackKey);
-                this.attackCooldown = 30;
+                this.attackCooldown = 50;
             }
 
-            if (this.game.keys.g && this.attackCooldown === 0 && this.slotA && this.slotB) {
+            if (this.game.keys.g && this.areacooldown === 0 && this.slotA && this.slotB) {
                 const attackKey = getAttackfromSlots(this.slotA, this.slotB);
                 executePlayerAttack(this, attackKey);
-                this.attackCooldown = 500;
+                this.areacooldown = 500;
             }
 
 
@@ -2345,7 +2451,7 @@ window.addEventListener('load', function(){
 
                     if (overlap) {
 
-                       applyElementalDamage(enemy, { elements: [p.typeKey.replace("bolt","")], damage: p.damage });
+                       applyElementalDamage(enemy, { elements: [p.element], damage: p.damage });
                         // Projectile disappears after hitting an enemy
                         p.alive = false;
                     }
