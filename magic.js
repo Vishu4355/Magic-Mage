@@ -567,6 +567,8 @@ function firePlayerProjectile(player, attack, attackKey) {
         projectileType
     );
 
+    projectile.kill = attack.kill; // pass the kill property to the projectile
+
 
     projectile.element = attack.elements[0]; // for now, just use the first element
 
@@ -636,12 +638,19 @@ function applyElementalDamage(enemy, attack) {
 
     const attackElement = attack.elements[0]; // for combos, decide later how multi-element interacts
 
+    let attackpower = attack.kill;
+
     if (enemy.config.isBoss) {
         enemy.takeDamage(attack.damage);
         return;
     }
 
-    const hitsNeeded = getHitsNeeded(attackElement, enemy.config.element);
+    let hitsNeeded = getHitsNeeded(attackElement, enemy.config.element);
+
+    if(attack.kill === "ONE"){
+        hitsNeeded = 1;
+    }; 
+
 
     if (enemy.hitsTaken === undefined) enemy.hitsTaken = 0;
     enemy.hitsTaken++;
@@ -712,6 +721,7 @@ const ATTACKS = {
         type: "area",
         damage: 3,
         effects: ["heavypain" ,"burn"],
+        kill: "ONE"  // special property to indicate this attack kills in one hit
         
     },
 
@@ -752,7 +762,8 @@ const ATTACKS = {
         type: "projectile",
         damage: 3,
         effects: ["freeze"],
-        projectileType: "icebolt"
+        projectileType: "icebolt",
+        kill: "ONE"  // special property to indicate this attack kills in one hit
     },
 
 
@@ -2451,7 +2462,7 @@ window.addEventListener('load', function(){
 
                     if (overlap) {
 
-                       applyElementalDamage(enemy, { elements: [p.element], damage: p.damage });
+                       applyElementalDamage(enemy, { elements: [p.element], damage: p.damage , kill: p.kill });
                         // Projectile disappears after hitting an enemy
                         p.alive = false;
                     }
